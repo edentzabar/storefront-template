@@ -1,0 +1,334 @@
+// JACOB storefront — Prisma schema (PostgreSQL).
+// Auth models (User/Session/Account/Verification) are required by better-auth.
+// Shop models are app-specific.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------- enums ----------
+
+enum UserRole {
+  customer
+  admin
+}
+
+enum OrderStatus {
+  new
+  processing
+  shipped
+  delivered
+  cancelled
+}
+
+enum PaymentMethod {
+  card
+  bit
+  applepay
+  googlepay
+}
+
+enum ShippingMethod {
+  standard
+  express
+  pickup
+}
+
+enum CouponType {
+  percent
+  amount
+}
+
+enum PopupTrigger {
+  delay // show after X seconds on the current page
+  exit_intent // show when mouse leaves the viewport
+  scroll // show after scrolling X% of the page
+}
+
+enum PopupFrequency {
+  session // until tab/window is closed
+  days // not again for N days
+  once // never again for this visitor
+}
+
+enum PopupAudience {
+  all
+  guest // not logged in
+  registered // logged in
+}
+
+enum PopupPage {
+  all
+  home
+  product
+  category
+}
+
+// ---------- auth (better-auth) ----------
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  phone         String?
+  role          UserRole  @default(customer)
+  tags          Json      @default("[]") // string array of admin-applied tags (VIP-manual, friend, etc.)
+  internalNotes String? // free text, admin-only
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  orders        Order[]
+  addresses     Address[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// ---------- shop ----------
+
+model Category {
+  id             String    @id @default(cuid())
+  slug           String    @unique
+  name           String
+  nameEn         String
+  cta            String    @default("")
+  image          String?
+  description    String    @default("")
+  seoTitle       String    @default("")
+  seoDescription String    @default("")
+  sortOrder      Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  products       Product[]
+
+  @@map("category")
+}
+
+model Product {
+  id               String      @id @default(cuid())
+  slug             String      @unique
+  categoryId       String
+  category         Category    @relation(fields: [categoryId], references: [id])
+  name             String
+  nameEn           String      @default("")
+  meta             String      @default("")
+  description      String      @default("")
+  price            Int
+  originalPrice    Int?
+  badge            String?
+  badgeType        String?
+  sku              String      @unique
+  stock            Int         @default(0)
+  image            String
+  images           Json        @default("[]")
+  specs            Json        @default("{}")
+  sizes            Json        @default("[]")
+  careInstructions String?
+  sortOrder        Int         @default(0)
+  isActive         Boolean     @default(true)
+  isFeatured       Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  orderItems       OrderItem[]
+
+  @@map("product")
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName  String
+  phone     String
+  email     String
+  street    String   @default("")
+  city      String   @default("")
+  zip       String   @default("")
+  country   String   @default("IL")
+  notes     String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("address")
+}
+
+model Order {
+  id               String         @id
+  userId           String?
+  user             User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status           OrderStatus    @default(new)
+  customerFullName String
+  customerEmail    String
+  customerPhone    String
+  shippingMethod   ShippingMethod
+  shippingAddress  String?
+  shippingCity     String?
+  shippingZip      String?
+  shippingNotes    String?
+  shippingCost     Int            @default(0)
+  paymentMethod    PaymentMethod
+  paymentLast4     String?
+  paymentReference String?
+  subtotal         Int
+  discount         Int            @default(0) // amount in agorot
+  couponId         String?
+  coupon           Coupon?        @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  couponCode       String? // snapshot at order time (preserved if coupon deleted)
+  total            Int
+  notes            String?
+  internalNotes    String? // admin-only notes about the order
+  invoiceNumber    String? // populated when invoice provider issues one
+  trackingNumber   String? // shipping tracking
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  items            OrderItem[]
+
+  @@map("orders")
+}
+
+model AbandonedCart {
+  id              String    @id @default(cuid())
+  email           String
+  customerName    String?
+  items           Json // [{ productId, name, image, size, price, qty }]
+  subtotal        Int       @default(0)
+  recoveryToken   String    @unique @default(cuid()) // signed link in the email
+  reminderSentAt  DateTime? // null = not yet emailed
+  recoveredAt     DateTime? // when the cart was successfully checked-out
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([email])
+  @@index([reminderSentAt])
+  @@map("abandoned_cart")
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique // dotted path: "brand.name", "contact.phone", etc.
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("site_setting")
+}
+
+model PopupCampaign {
+  id            String         @id @default(cuid())
+  name          String // internal name, for admin only
+  title         String
+  body          String
+  imageUrl      String?
+  ctaText       String?
+  ctaUrl        String?
+  couponCode    String? // optional discount code to reveal
+
+  triggerType   PopupTrigger   @default(delay)
+  triggerValue  Int            @default(5) // seconds for delay, % for scroll
+
+  frequencyType PopupFrequency @default(session)
+  frequencyDays Int            @default(7) // used when frequencyType == days
+
+  audience      PopupAudience  @default(all)
+  pageTarget    PopupPage      @default(all)
+
+  startsAt      DateTime?
+  endsAt        DateTime?
+  isActive      Boolean        @default(false)
+
+  // basic stats
+  impressions   Int            @default(0)
+  clicks        Int            @default(0)
+  closes        Int            @default(0)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("popup_campaign")
+}
+
+model Coupon {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  description String     @default("")
+  type        CouponType
+  value       Int // % (1-100) when type=percent, agorot when type=amount
+  minSubtotal Int        @default(0) // minimum cart subtotal in agorot
+  maxUses     Int? // null = unlimited
+  uses        Int        @default(0)
+  expiresAt   DateTime?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  orders      Order[]
+
+  @@map("coupon")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  image     String
+  size      String?
+  price     Int
+  qty       Int
+  position  Int     @default(0)
+
+  @@map("order_item")
+}

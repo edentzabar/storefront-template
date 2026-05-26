@@ -1,0 +1,191 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------- Brand tokens (semantic colors mapped to brand palette) ---------- */
+
+:root {
+  --radius: 0rem;
+
+  /* Brand palette */
+  --brand-primary: #1a1814;
+  --brand-primary-soft: #2a2620;
+  --brand-bg: #faf7f0;
+  --brand-bg-soft: #f5f0e6;
+  --brand-surface: #fdfaf3;
+  --brand-accent: #b8935a;
+  --brand-accent-light: #d4b683;
+  --brand-accent-dark: #8b6f43;
+  --brand-text: #3a342c;
+  --brand-text-soft: #6b6258;
+  --brand-border: #ebe4d7;
+
+  /* shadcn semantic tokens — mapped onto brand */
+  --background: var(--brand-bg);
+  --foreground: var(--brand-text);
+  --card: var(--brand-surface);
+  --card-foreground: var(--brand-text);
+  --popover: #ffffff;
+  --popover-foreground: var(--brand-text);
+  --primary: var(--brand-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--brand-bg-soft);
+  --secondary-foreground: var(--brand-primary);
+  --muted: var(--brand-bg-soft);
+  --muted-foreground: var(--brand-text-soft);
+  --accent: var(--brand-accent);
+  --accent-foreground: #ffffff;
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+  --border: var(--brand-border);
+  --input: var(--brand-border);
+  --ring: var(--brand-accent);
+  --chart-1: var(--brand-accent);
+  --chart-2: var(--brand-accent-light);
+  --chart-3: var(--brand-accent-dark);
+  --chart-4: var(--brand-primary);
+  --chart-5: var(--brand-text-soft);
+  --sidebar: var(--brand-surface);
+  --sidebar-foreground: var(--brand-text);
+  --sidebar-primary: var(--brand-primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--brand-bg-soft);
+  --sidebar-accent-foreground: var(--brand-primary);
+  --sidebar-border: var(--brand-border);
+  --sidebar-ring: var(--brand-accent);
+
+  --gold-gradient: linear-gradient(
+    135deg,
+    var(--brand-accent-light) 0%,
+    var(--brand-accent) 50%,
+    var(--brand-accent-dark) 100%
+  );
+}
+
+.dark {
+  --background: #0e0c0a;
+  --foreground: #efe9dd;
+  --card: #1a1814;
+  --card-foreground: #efe9dd;
+  --popover: #1a1814;
+  --popover-foreground: #efe9dd;
+  --primary: #efe9dd;
+  --primary-foreground: #0e0c0a;
+  --secondary: #2a2620;
+  --secondary-foreground: #efe9dd;
+  --muted: #2a2620;
+  --muted-foreground: #a39684;
+  --accent: var(--brand-accent);
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #2a2620;
+  --input: #2a2620;
+  --ring: var(--brand-accent);
+}
+
+/* ---------- Tailwind v4 theme mapping ---------- */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-soft: var(--brand-primary-soft);
+  --color-brand-bg: var(--brand-bg);
+  --color-brand-bg-soft: var(--brand-bg-soft);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-light: var(--brand-accent-light);
+  --color-brand-accent-dark: var(--brand-accent-dark);
+  --color-brand-text: var(--brand-text);
+  --color-brand-text-soft: var(--brand-text-soft);
+  --color-brand-border: var(--brand-border);
+
+  --font-sans: var(--font-heebo);
+  --font-display: var(--font-cormorant);
+
+  --radius-sm: calc(var(--radius) + 0px);
+  --radius-md: calc(var(--radius) + 0px);
+  --radius-lg: calc(var(--radius) + 0px);
+  --radius-xl: calc(var(--radius) + 0px);
+}
+
+/* ---------- Base ---------- */
+
+* {
+  border-color: var(--border);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-heebo), sans-serif;
+  font-weight: 300;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Brand utilities ---------- */
+
+.text-gold-grad,
+.text-brand-gradient {
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+/* Solid 3-stop brand gradient — use as background on chips, avatars,
+   progress bars, the sidebar logo tile, etc. Drives from the same
+   --brand-accent-* vars so changing those re-skins everywhere. */
+.bg-brand-gradient {
+  background-image: var(--gold-gradient);
+}
+
+.font-display {
+  font-family: var(--font-cormorant), serif;
+}
+
+.font-body {
+  font-family: var(--font-heebo), sans-serif;
+}
+
+/* ---------- Accent utility used inside h1/h2 spans ---------- */
+.accent { color: var(--brand-accent); }
+
+/* ---------- Selection ---------- */
+::selection {
+  background: var(--brand-accent);
+  color: #fff;
+}
+
+/* ---------- Animations ---------- */
+@keyframes heroZoom {
+  from { transform: scale(1.05); }
+  to { transform: scale(1.12); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
