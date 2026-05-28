@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { X, Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "@/lib/stores/cart-store";
 import { formatPrice } from "@/lib/format";
 import {
@@ -27,12 +27,11 @@ export function CartDrawer() {
   return (
     <Sheet open={isOpen} onOpenChange={setOpen}>
       <SheetContent side="left" className="w-full sm:max-w-md flex flex-col p-0 gap-0">
-        <SheetHeader className="px-6 py-5 border-b border-brand-border flex flex-row items-center justify-between space-y-0">
+        {/* SheetContent renders its own close button (top-end of the
+            panel). Don't add a duplicate inside the header. */}
+        <SheetHeader className="px-6 py-5 border-b border-brand-border space-y-0">
           <SheetTitle className="font-body text-lg font-medium">סל הקניות</SheetTitle>
           <SheetDescription className="sr-only">פריטים בעגלה</SheetDescription>
-          <button onClick={() => setOpen(false)} aria-label="סגור" className="text-brand-text-soft hover:text-brand-primary transition-colors">
-            <X className="w-5 h-5" />
-          </button>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
