@@ -17,6 +17,12 @@ const categorySchema = z.object({
   seoDescription: z.string().default(""),
   sortOrder: z.coerce.number().int().default(0),
   isActive: z.coerce.boolean().default(true),
+  /** Optional parent — empty string / "none" / null means top-level. */
+  parentId: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((v) => (v && v !== "" && v !== "none" ? v : null)),
 });
 
 export type CategoryFormState = {
@@ -62,6 +68,7 @@ export async function createCategory(_: CategoryFormState, formData: FormData): 
         seoDescription: parsed.data.seoDescription,
         sortOrder: parsed.data.sortOrder,
         isActive: parsed.data.isActive,
+        parentId: parsed.data.parentId,
       },
     });
   } catch (err) {
@@ -87,6 +94,22 @@ export async function updateCategory(
     return { ok: false, error: "ולידציה נכשלה", fieldErrors: fe };
   }
   try {
+    // Guard against self-parenting OR creating a 3-level chain.
+    if (parsed.data.parentId === categoryId) {
+      return { ok: false, error: "קטגוריה לא יכולה להיות הורה של עצמה" };
+    }
+    if (parsed.data.parentId) {
+      const parent = await prisma.category.findUnique({
+        where: { id: parsed.data.parentId },
+        select: { parentId: true },
+      });
+      if (parent?.parentId) {
+        return {
+          ok: false,
+          error: "ההורה שבחרת הוא כבר תת-קטגוריה — אפשר רק שתי רמות.",
+        };
+      }
+    }
     await prisma.category.update({
       where: { id: categoryId },
       data: {
@@ -100,6 +123,7 @@ export async function updateCategory(
         seoDescription: parsed.data.seoDescription,
         sortOrder: parsed.data.sortOrder,
         isActive: parsed.data.isActive,
+        parentId: parsed.data.parentId,
       },
     });
   } catch (err) {

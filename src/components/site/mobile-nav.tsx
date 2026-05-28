@@ -6,13 +6,23 @@ import { Menu, X, ExternalLink, MessageCircle, Phone, Mail } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import type { EditableSettings } from "@/lib/site-settings";
-import { navItems } from "@/lib/data/content";
+import type { CategoryTreeNode } from "@/lib/queries";
+
+const FIXED_LEFT = [{ id: "all", label: "כל הקולקציה", href: "/shop" }] as const;
+const FIXED_RIGHT = [{ id: "sale", label: "מבצעים", href: "/sale" }] as const;
 
 /**
- * Hamburger button + slide-in drawer for mobile. Categories, contact links,
- * legal pages. Auto-closes on link click via the onItemClick callback.
+ * Hamburger button + slide-in drawer for mobile. Renders the same nav
+ * structure as the desktop header — fixed bookends + dynamic categories
+ * (children indented under parents). Auto-closes on link click.
  */
-export function MobileNav({ settings }: { settings: EditableSettings }) {
+export function MobileNav({
+  settings,
+  categoryTree,
+}: {
+  settings: EditableSettings;
+  categoryTree: CategoryTreeNode[];
+}) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
 
@@ -58,7 +68,44 @@ export function MobileNav({ settings }: { settings: EditableSettings }) {
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-2">
           <ul className="space-y-0 list-none">
-            {navItems.map((item) => (
+            {FIXED_LEFT.map((item) => (
+              <li key={item.id}>
+                <Link
+                  href={item.href}
+                  onClick={close}
+                  className="block px-5 py-3 text-[0.95rem] text-brand-text hover:bg-brand-bg-soft hover:text-brand-accent transition-colors no-underline border-b border-brand-border/50"
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+            {categoryTree.map((cat) => (
+              <li key={cat.id}>
+                <Link
+                  href={`/category/${cat.slug}`}
+                  onClick={close}
+                  className="block px-5 py-3 text-[0.95rem] text-brand-text hover:bg-brand-bg-soft hover:text-brand-accent transition-colors no-underline border-b border-brand-border/50"
+                >
+                  {cat.name}
+                </Link>
+                {cat.children.length > 0 && (
+                  <ul className="list-none bg-brand-bg-soft/40">
+                    {cat.children.map((sub) => (
+                      <li key={sub.id}>
+                        <Link
+                          href={`/category/${sub.slug}`}
+                          onClick={close}
+                          className="block ps-10 pe-5 py-2.5 text-[0.88rem] text-brand-text-soft hover:text-brand-accent transition-colors no-underline border-b border-brand-border/30"
+                        >
+                          ↳ {sub.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+            {FIXED_RIGHT.map((item) => (
               <li key={item.id}>
                 <Link
                   href={item.href}

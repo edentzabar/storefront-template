@@ -9,6 +9,8 @@ import { ImageUploadField } from "@/components/admin/image-upload-field";
 
 type Props = {
   category?: Category | null;
+  /** All top-level categories the user can pick from as a parent (excludes self). */
+  parents: Array<{ id: string; name: string }>;
   action: (state: CategoryFormState, formData: FormData) => Promise<CategoryFormState>;
   submitLabel?: string;
 };
@@ -26,12 +28,16 @@ function slugify(s: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function CategoryForm({ category, action, submitLabel = "שמור" }: Props) {
+export function CategoryForm({ category, parents, action, submitLabel = "שמור" }: Props) {
   const [state, formAction, pending] = useActionState(action, initialState);
 
   const [image, setImage] = useState(category?.image ?? "");
   const [nameEn, setNameEn] = useState(category?.nameEn ?? "");
   const [slug, setSlug] = useState(category?.slug ?? "");
+  // Hierarchy: is this nested under a parent? Defaults to whatever's
+  // saved. New categories default to top-level (unchecked).
+  const [isSubcategory, setIsSubcategory] = useState(Boolean(category?.parentId));
+  const [parentId, setParentId] = useState(category?.parentId ?? "");
   // Treat existing categories as having a manually-set slug. For new ones,
   // auto-update slug from nameEn until the user types in the slug field.
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(Boolean(category));
@@ -136,6 +142,45 @@ export function CategoryForm({ category, action, submitLabel = "שמור" }: Pro
           rows={2}
           help="ל-meta description (לתצוגה בתוצאות חיפוש)"
         />
+      </Section>
+
+      <Section title="היררכיה">
+        <CheckboxField
+          label="זוהי תת-קטגוריה תחת קטגוריה אחרת"
+          name="__isSubcategory"
+          checked={isSubcategory}
+          onChange={(v) => {
+            setIsSubcategory(v);
+            if (!v) setParentId("");
+          }}
+        />
+        {isSubcategory && (
+          <label className="block">
+            <span className="text-[0.78rem] tracking-[0.1em] uppercase text-muted-foreground mb-1.5 block">
+              קטגוריית-אב <span className="text-destructive mr-1">*</span>
+            </span>
+            <select
+              name="parentId"
+              value={parentId}
+              onChange={(e) => setParentId(e.target.value)}
+              required
+              className="w-full px-4 py-2.5 border border-border bg-background focus:outline-none focus:border-foreground text-sm rounded-md"
+            >
+              <option value="">בחרו קטגוריה...</option>
+              {parents.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <span className="text-[11px] text-muted-foreground mt-1 block">
+              הקטגוריה תופיע בנאב מתחת לקטגוריה שתבחרי, כשרחפת על שמה.
+            </span>
+          </label>
+        )}
+        {!isSubcategory && (
+          <input type="hidden" name="parentId" value="" />
+        )}
       </Section>
 
       <Section title="הצגה">
@@ -287,17 +332,24 @@ function CheckboxField({
   label,
   name,
   defaultChecked,
+  checked,
+  onChange,
 }: {
   label: string;
   name: string;
   defaultChecked?: boolean;
+  checked?: boolean;
+  onChange?: (v: boolean) => void;
 }) {
+  const controlled = checked !== undefined && onChange !== undefined;
   return (
     <label className="inline-flex items-center gap-2.5 cursor-pointer">
       <input
         type="checkbox"
         name={name}
-        defaultChecked={defaultChecked}
+        {...(controlled
+          ? { checked, onChange: (e) => onChange!(e.target.checked) }
+          : { defaultChecked })}
         className="w-4 h-4 accent-brand-primary"
       />
       <span className="text-sm text-foreground">{label}</span>

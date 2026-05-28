@@ -139,21 +139,29 @@ model Verification {
 // ---------- shop ----------
 
 model Category {
-  id             String    @id @default(cuid())
-  slug           String    @unique
+  id             String     @id @default(cuid())
+  slug           String     @unique
   name           String
   nameEn         String
-  cta            String    @default("")
+  cta            String     @default("")
   image          String?
-  description    String    @default("")
-  seoTitle       String    @default("")
-  seoDescription String    @default("")
-  sortOrder      Int       @default(0)
-  isActive       Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  description    String     @default("")
+  seoTitle       String     @default("")
+  seoDescription String     @default("")
+  sortOrder      Int        @default(0)
+  isActive       Boolean    @default(true)
+  /** Self-referential hierarchy — set parentId to nest under another
+   *  category. Top-level categories have parentId = null. SetNull on
+   *  parent delete promotes children to top level rather than orphaning.
+   *  The admin UI enforces a max depth of 2 levels. */
+  parentId       String?
+  parent         Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children       Category[] @relation("CategoryHierarchy")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
   products       Product[]
 
+  @@index([parentId])
   @@map("category")
 }
 

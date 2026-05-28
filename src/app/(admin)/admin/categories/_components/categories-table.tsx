@@ -85,14 +85,32 @@ export function CategoriesTable({ categories }: { categories: CategoryRow[] }) {
                   </div>
                 </td>
                 <td className="px-4 py-3 align-middle">
-                  <Link
-                    href={`/admin/categories/${c.id}/edit`}
-                    className="font-medium text-foreground hover:text-brand-accent transition-colors no-underline"
+                  <div
+                    className={cn(
+                      "flex items-center gap-2",
+                      // visually indent subcategories so the hierarchy is obvious
+                      c.parentId && "ps-6",
+                    )}
                   >
-                    {c.name}
-                  </Link>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
-                    {c.nameEn}
+                    {c.parentId && (
+                      <span className="text-muted-foreground text-xs select-none">↳</span>
+                    )}
+                    <div>
+                      <Link
+                        href={`/admin/categories/${c.id}/edit`}
+                        className="font-medium text-foreground hover:text-brand-accent transition-colors no-underline"
+                      >
+                        {c.name}
+                      </Link>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        {c.nameEn}
+                        {c.parentId && (
+                          <span className="ms-2 inline-block bg-muted px-1.5 py-0.5 rounded text-[10px]">
+                            תת-קטגוריה
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </td>
                 <td className="px-4 py-3 align-middle hidden md:table-cell text-[11px] text-muted-foreground font-mono">

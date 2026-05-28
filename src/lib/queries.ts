@@ -17,7 +17,12 @@ export type CategoryView = {
   description: string;
   seoTitle: string;
   seoDescription: string;
+  parentId: string | null;
 };
+
+/** Top-level category with its children nested — used by storefront
+ *  nav dropdowns + homepage tile grid. */
+export type CategoryTreeNode = CategoryView & { children: CategoryView[] };
 
 export type ProductView = {
   id: string;
@@ -51,6 +56,7 @@ function serializeCategory(c: PrismaCategory): CategoryView {
     description: c.description,
     seoTitle: c.seoTitle,
     seoDescription: c.seoDescription,
+    parentId: c.parentId,
   };
 }
 
@@ -152,13 +158,40 @@ export async function getAllCategories(): Promise<CategoryView[]> {
   return rows.map(serializeCategory);
 }
 
+/**
+ * Top-level (parentId=null) categories with their subcategories nested.
+ * Used by storefront nav dropdowns + grid components that should only
+ * render parents at the top level. Filtering by parentId in JS rather
+ * than in Prisma's `where` sidesteps PrismaClientValidationError on
+ * nullable scalar filters in current Prisma versions.
+ */
+export async function getCategoryTree(): Promise<CategoryTreeNode[]> {
+  const rows = await prisma.category.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" },
+  });
+  const all = rows.map(serializeCategory);
+  // Loose equality — defensive in case a stale Prisma client serializes
+  // a brand-new parentId column as undefined instead of null.
+  const topLevel = all.filter((c) => !c.parentId);
+  return topLevel.map((parent) => ({
+    ...parent,
+    children: all.filter((c) => c.parentId === parent.id),
+  }));
+}
+
 export async function getFeaturedCategories(limit = 3): Promise<CategoryView[]> {
+  // Featured tiles only show top-level categories. Children belong in
+  // dropdowns / category-page sidebars, not as standalone tiles.
   const rows = await prisma.category.findMany({
     where: { isActive: true, image: { not: null } },
     orderBy: { sortOrder: "asc" },
-    take: limit,
+    take: limit * 4, // fetch generously; we'll filter children in JS
   });
-  return rows.map(serializeCategory);
+  return rows
+    .filter((c) => !c.parentId)
+    .slice(0, limit)
+    .map(serializeCategory);
 }
 
 export async function getCategoryBySlug(slug: string): Promise<CategoryView | null> {

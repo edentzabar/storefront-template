@@ -18,7 +18,17 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const PLACEHOLDER_CATEGORIES = [
+type SeedCategory = {
+  id: string;
+  slug: string;
+  name: string;
+  nameEn: string;
+  description: string;
+  /** Optional parent id — references another row in this same array */
+  parentId?: string;
+};
+
+const PLACEHOLDER_CATEGORIES: SeedCategory[] = [
   {
     id: "starter-new",
     slug: "new",
@@ -44,8 +54,13 @@ const PLACEHOLDER_CATEGORIES = [
 
 async function seedCategories() {
   console.log("seeding placeholder categories…");
-  for (let i = 0; i < PLACEHOLDER_CATEGORIES.length; i++) {
-    const c = PLACEHOLDER_CATEGORIES[i];
+  // Two passes — parents first, then children. Avoids FK errors if a
+  // child row references a parent that hasn't been inserted yet.
+  const parents = PLACEHOLDER_CATEGORIES.filter((c) => !c.parentId);
+  const children = PLACEHOLDER_CATEGORIES.filter((c) => c.parentId);
+
+  for (let i = 0; i < parents.length; i++) {
+    const c = parents[i];
     await prisma.category.upsert({
       where: { id: c.id },
       create: {
@@ -59,11 +74,34 @@ async function seedCategories() {
         seoTitle: c.name,
         seoDescription: c.description,
         sortOrder: i,
+        parentId: null,
       },
       update: {},
     });
   }
-  console.log(`✓ Seeded ${PLACEHOLDER_CATEGORIES.length} placeholder categories`);
+  for (let i = 0; i < children.length; i++) {
+    const c = children[i];
+    await prisma.category.upsert({
+      where: { id: c.id },
+      create: {
+        id: c.id,
+        slug: c.slug,
+        name: c.name,
+        nameEn: c.nameEn,
+        cta: "לקולקציה",
+        image: null,
+        description: c.description,
+        seoTitle: c.name,
+        seoDescription: c.description,
+        sortOrder: i,
+        parentId: c.parentId!,
+      },
+      update: { parentId: c.parentId! },
+    });
+  }
+  console.log(
+    `✓ Seeded ${parents.length} top-level + ${children.length} subcategories`,
+  );
 }
 
 async function main() {

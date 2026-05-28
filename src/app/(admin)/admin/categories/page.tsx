@@ -9,19 +9,27 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminCategoriesPage() {
-  const categories = await prisma.category.findMany({
+  const all = await prisma.category.findMany({
     include: { _count: { select: { products: true } } },
     orderBy: { sortOrder: "asc" },
   });
+
+  // Re-order so each top-level category is immediately followed by its
+  // children — the table renders them as a visual tree.
+  const tops = all.filter((c) => c.parentId === null);
+  const sorted = tops.flatMap((parent) => [
+    parent,
+    ...all.filter((c) => c.parentId === parent.id),
+  ]);
 
   return (
     <div className="p-8">
       <AdminPageHeader
         title="קטגוריות"
-        subtitle={`${categories.length} קטגוריות במסד`}
+        subtitle={`${all.length} קטגוריות במסד`}
         action={{ label: "+ קטגוריה חדשה", href: "/admin/categories/new" }}
       />
-      <CategoriesTable categories={categories} />
+      <CategoriesTable categories={sorted} />
     </div>
   );
 }
