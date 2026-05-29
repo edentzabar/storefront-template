@@ -43,7 +43,7 @@ export function AddToCartButton({
   const [busy, setBusy] = useState(false);
   const selfRef = useRef<HTMLButtonElement>(null);
 
-  function handleClick(e: React.MouseEvent) {
+  async function handleClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     if (requireSize && !size) {
@@ -51,13 +51,17 @@ export function AddToCartButton({
       return;
     }
     setBusy(true);
-    // Fire the fly animation BEFORE add() so the source image is still
-    // mounted in case add() triggers a re-render.
-    flyToCart(flySource?.current ?? selfRef.current);
+    // Add immediately — the cart-count badge ticks up while the clone
+    // is still mid-flight, which makes the landing feel like cause +
+    // effect ("I see it arriving AND I see the counter go up").
     add(product, qty, size);
     toast.success(`${product.name} נוסף לעגלה`);
+    // Wait for the fly to land before opening the drawer. Without
+    // this, mobile users never see the animation — the drawer slides
+    // over it within the first frame.
+    await flyToCart(flySource?.current ?? selfRef.current);
     if (openCart) setOpen(true);
-    setTimeout(() => setBusy(false), 350);
+    setBusy(false);
   }
 
   if (variant === "overlay") {
