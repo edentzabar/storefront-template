@@ -94,10 +94,11 @@ export function flyToCart(source: HTMLElement | null): Promise<void> {
 
     document.body.appendChild(clone);
 
+    const srcCenterY = srcRect.top + srcRect.height / 2;
     const dx = dstRect.left + dstRect.width / 2 - (srcRect.left + srcRect.width / 2);
-    const dy = dstRect.top + dstRect.height / 2 - (srcRect.top + srcRect.height / 2);
+    const dy = dstRect.top + dstRect.height / 2 - srcCenterY;
 
-    const keyframes = buildFlightKeyframes(dx, dy);
+    const keyframes = buildFlightKeyframes(dx, dy, srcCenterY);
 
     const anim = clone.animate(keyframes, {
       duration: FLIGHT_MS,
@@ -126,11 +127,19 @@ export function flyToCart(source: HTMLElement | null): Promise<void> {
  *   - Anticipation (offset 0 → 0.12): squat + counter-tilt
  *   - Arc (offset 0.15 → 0.92): sampled sine-curve parabola + spin
  *   - Impact (offset 0.96 → 1): horizontal squash + fade
+ *
+ * `srcTop` is the source's viewport-Y so we can cap the arc and stop
+ * it from peaking above the viewport (which made the animation look
+ * "cut off" on mobile detail pages where the source is near y=0).
  */
-function buildFlightKeyframes(dx: number, dy: number): Keyframe[] {
+function buildFlightKeyframes(dx: number, dy: number, srcTop: number): Keyframe[] {
   const distance = Math.hypot(dx, dy);
   // Lift higher for longer flights so it stays a real arc, not a hop.
-  const arcLift = Math.max(110, distance * 0.28);
+  const desiredLift = Math.max(110, distance * 0.28);
+  // The arc peaks at t=0.5 with screen Y = srcTop + dy/2 - arcLift.
+  // Cap so the peak stays at least 12px below the viewport top edge.
+  const maxLiftBeforeClip = srcTop + dy / 2 - 12;
+  const arcLift = Math.max(0, Math.min(desiredLift, maxLiftBeforeClip));
   // 1.5 full spins — playful tumble without being dizzying. Direction
   // matches horizontal motion so it feels like the item is rolling
   // toward the cart.
@@ -190,14 +199,37 @@ function buildFlightKeyframes(dx: number, dy: number): Keyframe[] {
 /**
  * Find the best element to use as the visual source for the fly.
  * Preference: [data-fly-source] > first <img> > the source itself.
+ *
+ * Only returns an element if it's MOSTLY visible. The product
+ * detail page has a huge image at the top — by the time the user
+ * has scrolled to the add-to-cart button, the image is largely
+ * (or entirely) above the viewport, so flying from it produces
+ * an animation that's mostly off-screen ("חתוך למעלה" on mobile).
+ * Falling back to the source (the tapped button) means the fly
+ * always starts somewhere visible.
  */
 function resolveFlyImage(source: HTMLElement): HTMLElement | null {
   const card = source.closest<HTMLElement>("[data-product-id]");
   if (!card) return null;
   const explicit = card.querySelector<HTMLElement>("[data-fly-source]");
-  if (explicit) return explicit;
+  if (explicit && isMostlyVisible(explicit)) return explicit;
   const img = card.querySelector<HTMLImageElement>("img");
-  return img ?? null;
+  if (img && isMostlyVisible(img)) return img;
+  return null;
+}
+
+/** True if at least `threshold` (0..1) of the element's box is
+ *  inside the viewport. */
+function isMostlyVisible(el: HTMLElement, threshold = 0.6): boolean {
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const visibleW = Math.max(0, Math.min(rect.right, vw) - Math.max(rect.left, 0));
+  const visibleH = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0));
+  const visibleArea = visibleW * visibleH;
+  const totalArea = rect.width * rect.height;
+  return visibleArea / totalArea >= threshold;
 }
 
 /** Pull a usable image URL from an element. */
