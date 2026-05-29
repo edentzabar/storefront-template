@@ -47,9 +47,8 @@ function nextKey() {
 
 type Props = {
   category?: Category | null;
-  /** All top-level categories the user can pick from as a parent (excludes self). */
-  parents: Array<{ id: string; name: string }>;
-  /** Existing children of this category (empty for new ones). */
+  /** Existing children of this category (empty for new categories or when
+   *  editing a subcategory which can't itself have children). */
   existingChildren?: Array<{ id: string; name: string; nameEn: string; slug: string }>;
   action: (state: CategoryFormState, formData: FormData) => Promise<CategoryFormState>;
   submitLabel?: string;
@@ -70,7 +69,6 @@ function slugify(s: string): string {
 
 export function CategoryForm({
   category,
-  parents,
   existingChildren = [],
   action,
   submitLabel = "שמור",
@@ -80,9 +78,11 @@ export function CategoryForm({
   const [image, setImage] = useState(category?.image ?? "");
   const [nameEn, setNameEn] = useState(category?.nameEn ?? "");
   const [slug, setSlug] = useState(category?.slug ?? "");
-  // Hierarchy: nested under a parent? "" / undefined means top-level.
-  const [parentId, setParentId] = useState(category?.parentId ?? "");
-  const isSubcategory = Boolean(parentId);
+  // True if we're editing an existing SUBcategory. Subcategories can't
+  // themselves contain subcategories, so the children editor is hidden.
+  // Parent is set during creation (from the parent's form) and is not
+  // user-editable here.
+  const isSubcategory = Boolean(category?.parentId);
 
   // Inline subcategory rows — only meaningful when this category is top-level.
   // Pre-fill from DB on edit. The order in this array IS the saved order
@@ -263,85 +263,57 @@ export function CategoryForm({
         />
       </Section>
 
-      <Section title="היררכיה">
-        {/* Parent selector — leave on "ללא" to make this a top-level category */}
-        <label className="block">
-          <span className="text-[0.78rem] tracking-[0.1em] uppercase text-muted-foreground mb-1.5 block">
-            קטגוריית-אב
-          </span>
-          <select
-            name="parentId"
-            value={parentId}
-            onChange={(e) => setParentId(e.target.value)}
-            className="w-full px-4 py-2.5 border border-border bg-background focus:outline-none focus:border-foreground text-sm rounded-md"
-          >
-            <option value="">ללא — זוהי קטגוריה ראשית</option>
-            {parents.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <span className="text-[11px] text-muted-foreground mt-1 block">
-            {isSubcategory
-              ? "הקטגוריה תופיע ב-dropdown מתחת לקטגוריית-האב, כשרחפים עליה."
-              : "ראשית — תוכלי להוסיף לה תתי-קטגוריות בהמשך."}
-          </span>
-        </label>
-
-        {/* Inline subcategories editor — only when this is a top-level category */}
-        {!isSubcategory && (
-          <div className="pt-5 border-t border-border">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h4 className="text-sm font-medium text-foreground">תתי-קטגוריות</h4>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  פתחי כמה שאת רוצה — יופיעו ב-dropdown מתחת לקטגוריה הזו בנאב.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={addChild}
-                className="inline-flex items-center gap-1.5 text-[0.82rem] font-medium px-3 py-1.5 rounded-md bg-brand-accent text-white hover:bg-brand-accent-dark transition-colors"
-              >
-                <Plus className="size-3.5" />
-                הוסף תת-קטגוריה
-              </button>
-            </div>
-
-            {children.length === 0 ? (
-              <div className="text-center py-6 border border-dashed border-border rounded-md text-[0.85rem] text-muted-foreground">
-                אין תתי-קטגוריות כרגע. לחצי "+ הוסף תת-קטגוריה" כדי לפתוח אחת.
-              </div>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={children.map((c) => c._key)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <ul className="space-y-2.5 list-none">
-                    {children.map((c) => (
-                      <SortableChildRow
-                        key={c._key}
-                        child={c}
-                        onChange={(patch) => updateChildByKey(c._key, patch)}
-                        onRemove={() => removeChildByKey(c._key)}
-                      />
-                    ))}
-                  </ul>
-                </SortableContext>
-              </DndContext>
-            )}
-
-            {/* Hidden — serialized for the server action */}
-            <input type="hidden" name="children" value={childrenPayload} />
+      {/* Subcategories — only shown for top-level categories. Subcategories
+          themselves can't have children (2-level max). Subcategories are
+          created exclusively from within their parent's form. */}
+      {!isSubcategory && (
+        <Section title="תתי-קטגוריות">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[11px] text-muted-foreground">
+              תתי-קטגוריות יופיעו ב-dropdown מתחת לקטגוריה הזו בנאב. גררי את אייקון ה-⠿ כדי לשנות סדר.
+            </p>
+            <button
+              type="button"
+              onClick={addChild}
+              className="inline-flex items-center gap-1.5 text-[0.82rem] font-medium px-3 py-1.5 rounded-md bg-brand-accent text-white hover:bg-brand-accent-dark transition-colors shrink-0"
+            >
+              <Plus className="size-3.5" />
+              הוסף תת-קטגוריה
+            </button>
           </div>
-        )}
-      </Section>
+
+          {children.length === 0 ? (
+            <div className="text-center py-6 border border-dashed border-border rounded-md text-[0.85rem] text-muted-foreground">
+              אין תתי-קטגוריות כרגע. לחצי "+ הוסף תת-קטגוריה" כדי לפתוח אחת.
+            </div>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={children.map((c) => c._key)}
+                strategy={verticalListSortingStrategy}
+              >
+                <ul className="space-y-2.5 list-none">
+                  {children.map((c) => (
+                    <SortableChildRow
+                      key={c._key}
+                      child={c}
+                      onChange={(patch) => updateChildByKey(c._key, patch)}
+                      onRemove={() => removeChildByKey(c._key)}
+                    />
+                  ))}
+                </ul>
+              </SortableContext>
+            </DndContext>
+          )}
+
+          {/* Hidden — serialized for the server action */}
+          <input type="hidden" name="children" value={childrenPayload} />
+        </Section>
+      )}
 
       <Section title="הצגה">
         <Grid>

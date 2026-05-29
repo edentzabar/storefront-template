@@ -23,12 +23,6 @@ const categorySchema = z.object({
   seoDescription: z.string().default(""),
   sortOrder: z.coerce.number().int().default(0),
   isActive: z.coerce.boolean().default(true),
-  /** Optional parent — empty string / "none" / null means top-level. */
-  parentId: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((v) => (v && v !== "" && v !== "none" ? v : null)),
 });
 
 /** Children submitted inline from a top-level category form. */
@@ -95,14 +89,8 @@ export async function createCategory(
     return { ok: false, error: "תתי-הקטגוריות שנשלחו לא תקינות" };
   }
 
-  // A new SUBcategory can't itself have children
-  if (parsed.data.parentId && children.length > 0) {
-    return {
-      ok: false,
-      error: "תת-קטגוריה לא יכולה להכיל תתי-קטגוריות משלה",
-    };
-  }
-
+  // New categories from this form are always top-level. Subcategories are
+  // created exclusively through their parent's children editor.
   try {
     await prisma.$transaction(async (tx) => {
       const parent = await tx.category.create({
@@ -117,10 +105,9 @@ export async function createCategory(
           seoDescription: parsed.data.seoDescription,
           sortOrder: parsed.data.sortOrder,
           isActive: parsed.data.isActive,
-          parentId: parsed.data.parentId,
+          parentId: null,
         },
       });
-      // Inline children (only for top-level)
       for (let i = 0; i < children.length; i++) {
         const c = children[i];
         await tx.category.create({
@@ -164,40 +151,36 @@ export async function updateCategory(
     return { ok: false, error: "תתי-הקטגוריות שנשלחו לא תקינות" };
   }
 
-  // Guard against self-parenting OR creating a 3-level chain
-  if (parsed.data.parentId === categoryId) {
-    return { ok: false, error: "קטגוריה לא יכולה להיות הורה של עצמה" };
+  // We DON'T accept parentId from the form anymore — the cat's
+  // parentId stays whatever the DB has (subcategories' parent is fixed,
+  // top-level stays top-level). To move a category between parents,
+  // delete it from one + create in the other.
+  // Find out if this row is itself a subcategory so we can skip the
+  // children logic entirely (subs can't have subs).
+  const me = await prisma.category.findUnique({
+    where: { id: categoryId },
+    select: { parentId: true },
+  });
+  if (!me) {
+    return { ok: false, error: "קטגוריה לא נמצאה" };
   }
-  if (parsed.data.parentId) {
-    const parent = await prisma.category.findUnique({
-      where: { id: parsed.data.parentId },
-      select: { parentId: true },
-    });
-    if (parent?.parentId) {
-      return {
-        ok: false,
-        error: "ההורה שבחרת הוא כבר תת-קטגוריה — אפשר רק שתי רמות.",
-      };
-    }
-  }
-  if (parsed.data.parentId && children.length > 0) {
-    return {
-      ok: false,
-      error: "תת-קטגוריה לא יכולה להכיל תתי-קטגוריות משלה",
-    };
-  }
+  const isSubcategory = me.parentId !== null;
 
   try {
-    // Reconcile children: compute create / update / delete sets BEFORE
-    // we open the transaction, so we can return a clean error if a
-    // delete-candidate still has products attached.
-    const currentChildren = await prisma.category.findMany({
-      where: { parentId: categoryId },
-      select: { id: true },
-    });
+    // Reconcile children (top-level only) — compute create / update /
+    // delete sets BEFORE the transaction so we can return a clean error
+    // if a delete-candidate still has products.
+    const currentChildren = isSubcategory
+      ? []
+      : await prisma.category.findMany({
+          where: { parentId: categoryId },
+          select: { id: true },
+        });
     const currentIds = new Set(currentChildren.map((c) => c.id));
-    const submittedIds = new Set(children.filter((c) => c.id).map((c) => c.id!));
-
+    const effectiveChildren = isSubcategory ? [] : children;
+    const submittedIds = new Set(
+      effectiveChildren.filter((c) => c.id).map((c) => c.id!),
+    );
     const toDelete = [...currentIds].filter((id) => !submittedIds.has(id));
 
     if (toDelete.length > 0) {
@@ -214,7 +197,7 @@ export async function updateCategory(
     }
 
     await prisma.$transaction(async (tx) => {
-      // Update parent itself
+      // Update the category itself — parentId NOT touched
       await tx.category.update({
         where: { id: categoryId },
         data: {
@@ -228,9 +211,10 @@ export async function updateCategory(
           seoDescription: parsed.data.seoDescription,
           sortOrder: parsed.data.sortOrder,
           isActive: parsed.data.isActive,
-          parentId: parsed.data.parentId,
         },
       });
+
+      if (isSubcategory) return;
 
       // Delete children that were removed in the form
       if (toDelete.length > 0) {
@@ -238,8 +222,8 @@ export async function updateCategory(
       }
 
       // Upsert remaining children — preserve order via sortOrder = i
-      for (let i = 0; i < children.length; i++) {
-        const c = children[i];
+      for (let i = 0; i < effectiveChildren.length; i++) {
+        const c = effectiveChildren[i];
         if (c.id) {
           await tx.category.update({
             where: { id: c.id },

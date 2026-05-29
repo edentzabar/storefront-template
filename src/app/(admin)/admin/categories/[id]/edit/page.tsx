@@ -24,18 +24,6 @@ export default async function EditCategoryPage({ params }: Params) {
   ]);
   if (!category) notFound();
 
-  // Available parents = top-level categories except this one (no self-ref).
-  // If this category has its own children, it can't become a subcategory
-  // (would create a 3-level tree).
-  const hasChildren = existingChildren.length > 0;
-  const parents = hasChildren
-    ? []
-    : await prisma.category.findMany({
-        where: { parentId: null, id: { not: id } },
-        select: { id: true, name: true },
-        orderBy: { sortOrder: "asc" },
-      });
-
   const boundAction = updateCategory.bind(null, category.id);
 
   return (
@@ -43,7 +31,6 @@ export default async function EditCategoryPage({ params }: Params) {
       <AdminPageHeader title={`עריכת: ${category.name}`} />
       <CategoryForm
         category={category}
-        parents={parents}
         existingChildren={existingChildren}
         action={boundAction}
         submitLabel="שמור שינויים"
