@@ -32,7 +32,15 @@ export function ProductDetail({ product, category }: Props) {
     product.sizes !== undefined && product.sizes.length > 0;
 
   return (
-    <main className="py-8 px-6 lg:px-10">
+    <main
+      className="py-8 px-6 lg:px-10"
+      // The fly-to-cart util walks up from the clicked add-to-cart
+      // button to find [data-product-id] and uses the first <img>
+      // inside as the flying source. Setting it on <main> means the
+      // big main gallery image is what flies (it's the first <img>
+      // in DOM order, before thumbnails).
+      data-product-id={product.id}
+    >
       <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-16">
         {/* Gallery */}
         <div className="lg:sticky lg:top-24 lg:self-start">

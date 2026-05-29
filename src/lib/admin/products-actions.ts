@@ -185,6 +185,20 @@ export async function updateProduct(
   }
   revalidatePath("/admin/products");
   revalidatePath(`/product/${parsed.data.slug}`);
+  // Storefront listings need refreshing too — homepage featured strip,
+  // shop grid, search, wishlist, and the product's category page all
+  // render this product. Without these, the "אזל המלאי" badge won't
+  // appear until ISR happens to revalidate the page on its own.
+  revalidatePath("/");
+  revalidatePath("/shop");
+  revalidatePath("/search");
+  revalidatePath("/wishlist");
+  // Best-effort category revalidate — we have categoryId, need the slug
+  const cat = await prisma.category.findUnique({
+    where: { id: parsed.data.categoryId },
+    select: { slug: true },
+  });
+  if (cat) revalidatePath(`/category/${cat.slug}`);
   redirect("/admin/products");
 }
 

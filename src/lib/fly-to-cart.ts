@@ -23,6 +23,10 @@ const REDUCED_MOTION = () =>
 /** CSS selector for the cart icon target. Header-actions sets data-cart-icon
  *  on the cart button. */
 const CART_TARGET_SELECTOR = "[data-cart-icon]";
+/** Marker on in-flight flying clones so we can clean them up before
+ *  starting a new fly. Prevents the screen from littering with stuck
+ *  clones if the user mashes "add to cart". */
+const CLONE_MARKER = "data-fly-clone";
 
 export function flyToCart(source: HTMLElement | null): void {
   if (typeof window === "undefined") return;
@@ -31,6 +35,18 @@ export function flyToCart(source: HTMLElement | null): void {
 
   const cart = document.querySelector<HTMLElement>(CART_TARGET_SELECTOR);
   if (!cart) return;
+
+  // Snap any in-flight cart bump back to baseline BEFORE measuring,
+  // otherwise rapid clicks read the cart's rect mid-scale and the
+  // destination wanders ("קופץ לכל מיני איזורים").
+  cart.getAnimations().forEach((a) => a.cancel());
+
+  // Sweep up old flying clones from previous clicks — if the user
+  // clicks faster than the 700ms flight time, the previous clone is
+  // still mid-air; remove it so we don't end up with a pile.
+  document
+    .querySelectorAll<HTMLElement>(`[${CLONE_MARKER}]`)
+    .forEach((c) => c.remove());
 
   // If the caller handed us a button (typical for product-card overlay
   // buttons), walk up to the nearest [data-product-id] card and use its
@@ -52,6 +68,7 @@ export function flyToCart(source: HTMLElement | null): void {
   // otherwise fall back to a circular brand-accent dot so it still feels
   // like SOMETHING flew, even on text-only buttons.
   const clone = source.cloneNode(true) as HTMLElement;
+  clone.setAttribute(CLONE_MARKER, "");
   clone.style.position = "fixed";
   clone.style.left = `${srcRect.left}px`;
   clone.style.top = `${srcRect.top}px`;
