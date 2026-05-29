@@ -258,6 +258,55 @@ export async function updateCategory(
 
 /* ────────────── Delete ────────────── */
 
+/**
+ * Persist a new order for top-level categories. The order in the array
+ * becomes each category's sortOrder. Called by drag-and-drop UI in
+ * /admin/categories — the table sends the new top-level order after
+ * the user finishes dragging.
+ *
+ * Subcategory ordering is managed elsewhere (parent's edit form).
+ */
+export async function reorderTopLevelCategories(orderedIds: string[]): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  await assertAdmin();
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    return { ok: false, error: "רשימה ריקה" };
+  }
+  // Safety: confirm every id we got is actually top-level. Prevents the
+  // client from accidentally reordering subcategories into top-level
+  // sortOrder space (which wouldn't be wrong, just surprising).
+  const rows = await prisma.category.findMany({
+    where: { id: { in: orderedIds } },
+    select: { id: true, parentId: true },
+  });
+  if (rows.length !== orderedIds.length) {
+    return { ok: false, error: "חלק מהקטגוריות לא נמצאו" };
+  }
+  const nonTopLevel = rows.filter((r) => r.parentId !== null);
+  if (nonTopLevel.length > 0) {
+    return {
+      ok: false,
+      error: "אחת מהקטגוריות שניסית לסדר היא תת-קטגוריה — סדרי אותה דרך עריכת ההורה.",
+    };
+  }
+  try {
+    await prisma.$transaction(
+      orderedIds.map((id, idx) =>
+        prisma.category.update({
+          where: { id },
+          data: { sortOrder: idx },
+        }),
+      ),
+    );
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "שגיאה בעדכון סדר" };
+  }
+  revalidatePath("/admin/categories");
+  return { ok: true };
+}
+
 export async function deleteCategory(categoryId: string) {
   await assertAdmin();
   try {
