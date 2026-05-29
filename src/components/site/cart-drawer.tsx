@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { FreeShippingProgress } from "@/components/site/free-shipping-progress";
 
 export function CartDrawer() {
   const isOpen = useCart((s) => s.isOpen);
@@ -33,6 +34,8 @@ export function CartDrawer() {
           <SheetTitle className="font-body text-lg font-medium">סל הקניות</SheetTitle>
           <SheetDescription className="sr-only">פריטים בעגלה</SheetDescription>
         </SheetHeader>
+
+        <FreeShippingProgress />
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {!mounted || items.length === 0 ? (

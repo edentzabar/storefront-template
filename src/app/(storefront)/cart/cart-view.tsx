@@ -7,6 +7,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "@/lib/stores/cart-store";
 import { formatPrice } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
+import { FreeShippingProgress } from "@/components/site/free-shipping-progress";
 
 export function CartView() {
   const items = useCart((s) => s.items);
@@ -41,6 +42,10 @@ export function CartView() {
 
   return (
     <div className="grid lg:grid-cols-[1.5fr_1fr] gap-10">
+      <div className="space-y-5">
+        <div className="border border-brand-border rounded-md overflow-hidden">
+          <FreeShippingProgress />
+        </div>
       <ul className="space-y-6">
         {items.map((item) => (
           <li key={item.key} className="flex gap-5 pb-6 border-b border-brand-border">
@@ -96,6 +101,7 @@ export function CartView() {
           </li>
         ))}
       </ul>
+      </div>
 
       <aside className="lg:sticky lg:top-24 lg:self-start bg-brand-surface p-7 border border-brand-border">
         <h2 className="font-body text-lg font-medium mb-5 text-brand-primary">סיכום הזמנה</h2>

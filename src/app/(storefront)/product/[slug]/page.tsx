@@ -10,6 +10,8 @@ import { siteConfig } from "@/lib/site-config";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
 import { ProductDetail } from "@/components/site/product-detail";
 import { ProductCard } from "@/components/site/product-card";
+import { RecentlyViewedTracker } from "@/components/site/recently-viewed-tracker";
+import { RecentlyViewedStrip } from "@/components/site/recently-viewed-strip";
 
 export async function generateStaticParams() {
   const slugs = await getAllProductSlugs();
@@ -120,6 +122,18 @@ export default async function ProductPage({ params }: Params) {
         ]}
       />
       <ProductDetail product={product} category={category} />
+
+      {/* Side-effect: push this product onto the recently-viewed rail */}
+      <RecentlyViewedTracker
+        item={{
+          id: product.id,
+          slug: product.slug,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+        }}
+      />
+
       {related.length > 0 && (
         <section className="border-t border-brand-border py-16 px-6 lg:px-10 bg-brand-bg">
           <div className="max-w-[1200px] mx-auto">
@@ -134,6 +148,10 @@ export default async function ProductPage({ params }: Params) {
           </div>
         </section>
       )}
+
+      {/* Recently-viewed rail — hides itself unless ≥2 other products
+          have been visited. Excludes the current one. */}
+      <RecentlyViewedStrip excludeId={product.id} />
     </>
   );
 }
