@@ -72,7 +72,7 @@ export type SettingKey = (typeof SETTING_KEYS)[number];
 
 function defaults(): EditableSettings {
   return {
-    brand: { name: siteConfig.name, tagline: siteConfig.tagline, logoUrl: "" },
+    brand: { name: siteConfig.name, tagline: siteConfig.tagline, logoUrl: "/brand/logo.png" },
     contact: {
       phone: siteConfig.contact.phone,
       phoneIntl: siteConfig.contact.phoneIntl,
