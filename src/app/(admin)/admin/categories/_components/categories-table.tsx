@@ -24,9 +24,17 @@ type CategoryRow = Prisma.CategoryGetPayload<{
   include: { _count: { select: { products: true } } };
 }>;
 
-export function CategoriesTable({ categories }: { categories: CategoryRow[] }) {
+/** What the page passes us — base row + the computed product counts. */
+export type CategoryRowWithAggregate = CategoryRow & {
+  /** Direct products on this category + products in all its subcategories */
+  aggregateProductCount: number;
+  /** Just the subcategory total (so we can show "X (Y בתתים)" on parents) */
+  childrenProductCount: number;
+};
+
+export function CategoriesTable({ categories }: { categories: CategoryRowWithAggregate[] }) {
   const [pending, startTransition] = useTransition();
-  const [toDelete, setToDelete] = useState<CategoryRow | null>(null);
+  const [toDelete, setToDelete] = useState<CategoryRowWithAggregate | null>(null);
   // Expansion state — set of top-level ids whose children are visible.
   // Default: all collapsed (cleaner for stores with many subcategories).
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -192,8 +200,21 @@ export function CategoriesTable({ categories }: { categories: CategoryRow[] }) {
                 <td className="px-4 py-3 align-middle hidden md:table-cell text-[11px] text-muted-foreground font-mono">
                   /{c.slug}
                 </td>
-                <td className="px-4 py-3 align-middle hidden sm:table-cell text-sm tabular-nums">
-                  {c._count.products}
+                <td className="px-4 py-3 align-middle hidden sm:table-cell text-sm">
+                  <span className="tabular-nums text-foreground">
+                    {c.aggregateProductCount}
+                  </span>
+                  {/* Subtle hint when a parent's count is from its subcategories */}
+                  {c.childrenProductCount > 0 && (
+                    <span
+                      className="block text-[10px] text-muted-foreground tabular-nums"
+                      title={`${c._count.products} ישירות, ${c.childrenProductCount} בתתי-קטגוריות`}
+                    >
+                      {c._count.products === 0
+                        ? `(${c.childrenProductCount} בתתים)`
+                        : `(${c._count.products} ישיר · ${c.childrenProductCount} בתתים)`}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 align-middle hidden lg:table-cell text-sm text-muted-foreground tabular-nums">
                   {c.sortOrder}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { AdminPageHeader } from "../_components/admin-page-header";
-import { CategoriesTable } from "./_components/categories-table";
+import { CategoriesTable, type CategoryRowWithAggregate } from "./_components/categories-table";
 
 export const metadata: Metadata = {
   title: "ניהול קטגוריות",
@@ -14,12 +14,37 @@ export default async function AdminCategoriesPage() {
     orderBy: { sortOrder: "asc" },
   });
 
-  // Re-order so each top-level category is immediately followed by its
-  // children — the table renders them as a visual tree.
-  const tops = all.filter((c) => c.parentId === null);
+  // For each parent, the displayed product count should INCLUDE products
+  // sitting in its subcategories — that's the user's mental model
+  // ("how many products live under this section?"). Leaves + childless
+  // categories keep their direct count.
+  const childrenSumByParent = new Map<string, number>();
+  for (const c of all) {
+    if (c.parentId) {
+      childrenSumByParent.set(
+        c.parentId,
+        (childrenSumByParent.get(c.parentId) ?? 0) + c._count.products,
+      );
+    }
+  }
+
+  const withAggregates: CategoryRowWithAggregate[] = all.map((c) => {
+    const childrenSum = childrenSumByParent.get(c.id) ?? 0;
+    return {
+      ...c,
+      // total = direct products on this category + products in all its subs
+      aggregateProductCount: c._count.products + childrenSum,
+      // explicit field — used by the table to show e.g. "3 (2 בתתים)"
+      // when there's both direct + subcategory products
+      childrenProductCount: childrenSum,
+    };
+  });
+
+  // Re-order so each top-level is immediately followed by its children
+  const tops = withAggregates.filter((c) => c.parentId === null);
   const sorted = tops.flatMap((parent) => [
     parent,
-    ...all.filter((c) => c.parentId === parent.id),
+    ...withAggregates.filter((c) => c.parentId === parent.id),
   ]);
 
   return (
