@@ -9,10 +9,17 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminProductsPage() {
-  const products = await prisma.product.findMany({
-    include: { category: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const [products, categories] = await Promise.all([
+    prisma.product.findMany({
+      include: { category: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    // Lean list for the "move to category" bulk action modal
+    prisma.category.findMany({
+      select: { id: true, name: true },
+      orderBy: { sortOrder: "asc" },
+    }),
+  ]);
 
   return (
     <div className="p-8">
@@ -21,7 +28,7 @@ export default async function AdminProductsPage() {
         subtitle={`${products.length} מוצרים במסד`}
         action={{ label: "+ מוצר חדש", href: "/admin/products/new" }}
       />
-      <ProductsTable products={products} />
+      <ProductsTable products={products} categories={categories} />
     </div>
   );
 }

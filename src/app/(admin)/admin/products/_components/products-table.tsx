@@ -23,12 +23,39 @@ import {
 } from "@/lib/admin/products-actions";
 import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { BulkActionToolbar } from "./bulk-action-toolbar";
 
 type ProductRow = Prisma.ProductGetPayload<{ include: { category: true } }>;
 
-export function ProductsTable({ products }: { products: ProductRow[] }) {
+export function ProductsTable({
+  products,
+  categories,
+}: {
+  products: ProductRow[];
+  categories: { id: string; name: string }[];
+}) {
   const [pending, startTransition] = useTransition();
   const [toDelete, setToDelete] = useState<ProductRow | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const allVisible = products.length > 0 && products.every((p) => selected.has(p.id));
+  const someVisible = products.some((p) => selected.has(p.id)) && !allVisible;
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function toggleAll() {
+    if (allVisible) setSelected(new Set());
+    else setSelected(new Set(products.map((p) => p.id)));
+  }
+  function clear() {
+    setSelected(new Set());
+  }
 
   function confirmDelete() {
     if (!toDelete) return;
@@ -57,10 +84,28 @@ export function ProductsTable({ products }: { products: ProductRow[] }) {
 
   return (
     <>
+      <BulkActionToolbar
+        selected={selected}
+        products={products}
+        categories={categories}
+        onClear={clear}
+      />
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="w-full">
           <thead className="bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
             <tr>
+              <th className="px-3 py-3 w-10">
+                <input
+                  type="checkbox"
+                  aria-label="בחר הכל"
+                  checked={allVisible}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someVisible;
+                  }}
+                  onChange={toggleAll}
+                  className="size-4 accent-brand-accent cursor-pointer"
+                />
+              </th>
               <th className="px-4 py-3 text-right font-medium w-16">תמונה</th>
               <th className="px-4 py-3 text-right font-medium">שם</th>
               <th className="px-4 py-3 text-right font-medium hidden md:table-cell">קטגוריה</th>
@@ -72,8 +117,25 @@ export function ProductsTable({ products }: { products: ProductRow[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {products.map((p) => (
-              <tr key={p.id} className="hover:bg-muted/30 transition-colors">
+            {products.map((p) => {
+              const isSelected = selected.has(p.id);
+              return (
+              <tr
+                key={p.id}
+                className={cn(
+                  "transition-colors",
+                  isSelected ? "bg-brand-accent/8" : "hover:bg-muted/30",
+                )}
+              >
+                <td className="px-3 py-3 align-middle">
+                  <input
+                    type="checkbox"
+                    aria-label={`בחר ${p.name}`}
+                    checked={isSelected}
+                    onChange={() => toggle(p.id)}
+                    className="size-4 accent-brand-accent cursor-pointer"
+                  />
+                </td>
                 <td className="px-4 py-3 align-middle">
                   <div className="relative size-12 overflow-hidden rounded-md bg-muted">
                     {p.image && (
@@ -188,7 +250,8 @@ export function ProductsTable({ products }: { products: ProductRow[] }) {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
