@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
-import type { Prisma, Category } from "@prisma/client";
+import { useActionState, useMemo, useState } from "react";
+import type { Prisma } from "@prisma/client";
 import type { ProductFormState } from "@/lib/admin/products-actions";
 import { cn } from "@/lib/utils";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
@@ -10,8 +10,18 @@ import { MultiImageField } from "@/components/admin/multi-image-field";
 
 type ProductWithCategory = Prisma.ProductGetPayload<{ include: { category: true } }>;
 
+/** Categories arrive as a 2-level tree from the page. The picker shows
+ *  top-level first, then a subcategory select only if the chosen
+ *  top-level has children. The submitted categoryId is the leaf (= the
+ *  subcategory if one is picked, otherwise the top-level itself). */
+export type CategoryTreeForPicker = Array<{
+  id: string;
+  name: string;
+  children: Array<{ id: string; name: string }>;
+}>;
+
 type Props = {
-  categories: Category[];
+  categories: CategoryTreeForPicker;
   product?: ProductWithCategory | null;
   action: (state: ProductFormState, formData: FormData) => Promise<ProductFormState>;
   submitLabel?: string;
@@ -41,6 +51,25 @@ export function ProductForm({ categories, product, action, submitLabel = "שמו
   const [nameEn, setNameEn] = useState(product?.nameEn ?? "");
   const [slug, setSlug] = useState(product?.slug ?? "");
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(Boolean(product));
+
+  // Category picker — 2 levels. Initialize based on the saved categoryId:
+  //   - if it matches a child somewhere, top-level = that child's parent
+  //   - otherwise top-level = the category itself (no subcategory)
+  const initialIds = useMemo(() => {
+    const saved = product?.categoryId ?? "";
+    for (const top of categories) {
+      const child = top.children.find((c) => c.id === saved);
+      if (child) return { topLevelId: top.id, subcategoryId: child.id };
+    }
+    return { topLevelId: saved, subcategoryId: "" };
+  }, [categories, product?.categoryId]);
+  const [topLevelId, setTopLevelId] = useState(initialIds.topLevelId);
+  const [subcategoryId, setSubcategoryId] = useState(initialIds.subcategoryId);
+
+  const selectedTopLevel = categories.find((c) => c.id === topLevelId);
+  const subOptions = selectedTopLevel?.children ?? [];
+  // The leaf id is what actually gets saved on the product.
+  const effectiveCategoryId = subcategoryId || topLevelId;
 
   function handleNameEnChange(value: string) {
     setNameEn(value);
@@ -99,14 +128,65 @@ export function ProductForm({ categories, product, action, submitLabel = "שמו
             }
             dir="ltr"
           />
-          <SelectField
-            label="קטגוריה"
-            name="categoryId"
-            required
-            defaultValue={product?.categoryId}
-            options={categories.map((c) => ({ value: c.id, label: c.name }))}
-            error={state.fieldErrors?.categoryId}
-          />
+          {/* Category picker — top-level + (conditional) subcategory.
+              Submitted value is the leaf (subcategory if picked, else top). */}
+          <div className="grid grid-cols-1 gap-2">
+            <label className="block">
+              <span className="text-[0.78rem] tracking-[0.1em] uppercase text-muted-foreground mb-1.5 block">
+                קטגוריה <span className="text-destructive mr-1">*</span>
+              </span>
+              <select
+                value={topLevelId}
+                onChange={(e) => {
+                  setTopLevelId(e.target.value);
+                  setSubcategoryId(""); // reset child when parent changes
+                }}
+                required
+                className={cn(
+                  "w-full px-4 py-2.5 border bg-background focus:outline-none focus:border-foreground text-sm rounded-md",
+                  state.fieldErrors?.categoryId ? "border-destructive" : "border-border",
+                )}
+              >
+                <option value="">בחרי קטגוריה...</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {state.fieldErrors?.categoryId && (
+                <span className="text-[11px] text-destructive mt-1 block">
+                  {state.fieldErrors.categoryId}
+                </span>
+              )}
+            </label>
+
+            {subOptions.length > 0 && (
+              <label className="block">
+                <span className="text-[0.78rem] tracking-[0.1em] uppercase text-muted-foreground mb-1.5 block">
+                  תת-קטגוריה (אופציונלי)
+                </span>
+                <select
+                  value={subcategoryId}
+                  onChange={(e) => setSubcategoryId(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-border bg-background focus:outline-none focus:border-foreground text-sm rounded-md"
+                >
+                  <option value="">— ללא (השאר ב-{selectedTopLevel?.name})</option>
+                  {subOptions.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[11px] text-muted-foreground mt-1 block">
+                  בחירה תשייך את המוצר לתת-קטגוריה במקום לקטגוריה הראשית.
+                </span>
+              </label>
+            )}
+
+            {/* Server-side: this is what actually gets saved on the product */}
+            <input type="hidden" name="categoryId" value={effectiveCategoryId} />
+          </div>
         </Grid>
         <Grid>
           <ControlledField

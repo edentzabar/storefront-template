@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AdminPageHeader } from "../../../_components/admin-page-header";
-import { ProductForm } from "../../_components/product-form";
+import { ProductForm, type CategoryTreeForPicker } from "../../_components/product-form";
 import { updateProduct } from "@/lib/admin/products-actions";
 
 export const metadata: Metadata = {
@@ -12,6 +12,22 @@ export const metadata: Metadata = {
 
 type Params = { params: Promise<{ id: string }> };
 
+async function loadCategoryTree(): Promise<CategoryTreeForPicker> {
+  const all = await prisma.category.findMany({
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, name: true, parentId: true },
+  });
+  return all
+    .filter((c) => c.parentId === null)
+    .map((parent) => ({
+      id: parent.id,
+      name: parent.name,
+      children: all
+        .filter((c) => c.parentId === parent.id)
+        .map((c) => ({ id: c.id, name: c.name })),
+    }));
+}
+
 export default async function EditProductPage({ params }: Params) {
   const { id } = await params;
   const [product, categories] = await Promise.all([
@@ -19,7 +35,7 @@ export default async function EditProductPage({ params }: Params) {
       where: { id },
       include: { category: true },
     }),
-    prisma.category.findMany({ orderBy: { sortOrder: "asc" } }),
+    loadCategoryTree(),
   ]);
 
   if (!product) notFound();

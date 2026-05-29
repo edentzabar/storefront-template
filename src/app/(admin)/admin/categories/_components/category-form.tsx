@@ -1,16 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
+import { Plus, X } from "lucide-react";
 import type { Category } from "@prisma/client";
 import type { CategoryFormState } from "@/lib/admin/categories-actions";
 import { cn } from "@/lib/utils";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 
+/** A subcategory row in the inline children editor. */
+type ChildDraft = {
+  /** undefined for a brand-new row, set for an existing child loaded from the DB */
+  id?: string;
+  name: string;
+  nameEn: string;
+  slug: string;
+  /** true if the user manually edited the slug — otherwise it tracks nameEn */
+  slugManuallyEdited: boolean;
+};
+
 type Props = {
   category?: Category | null;
   /** All top-level categories the user can pick from as a parent (excludes self). */
   parents: Array<{ id: string; name: string }>;
+  /** Existing children of this category (empty for new ones). */
+  existingChildren?: Array<{ id: string; name: string; nameEn: string; slug: string }>;
   action: (state: CategoryFormState, formData: FormData) => Promise<CategoryFormState>;
   submitLabel?: string;
 };
@@ -28,16 +42,33 @@ function slugify(s: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function CategoryForm({ category, parents, action, submitLabel = "שמור" }: Props) {
+export function CategoryForm({
+  category,
+  parents,
+  existingChildren = [],
+  action,
+  submitLabel = "שמור",
+}: Props) {
   const [state, formAction, pending] = useActionState(action, initialState);
 
   const [image, setImage] = useState(category?.image ?? "");
   const [nameEn, setNameEn] = useState(category?.nameEn ?? "");
   const [slug, setSlug] = useState(category?.slug ?? "");
-  // Hierarchy: is this nested under a parent? Defaults to whatever's
-  // saved. New categories default to top-level (unchecked).
-  const [isSubcategory, setIsSubcategory] = useState(Boolean(category?.parentId));
+  // Hierarchy: nested under a parent? "" / undefined means top-level.
   const [parentId, setParentId] = useState(category?.parentId ?? "");
+  const isSubcategory = Boolean(parentId);
+
+  // Inline subcategory rows — only meaningful when this category is top-level.
+  // Pre-fill from DB on edit.
+  const [children, setChildren] = useState<ChildDraft[]>(() =>
+    existingChildren.map((c) => ({
+      id: c.id,
+      name: c.name,
+      nameEn: c.nameEn,
+      slug: c.slug,
+      slugManuallyEdited: true, // already saved → don't auto-override
+    })),
+  );
   // Treat existing categories as having a manually-set slug. For new ones,
   // auto-update slug from nameEn until the user types in the slug field.
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(Boolean(category));
@@ -59,6 +90,51 @@ export function CategoryForm({ category, parents, action, submitLabel = "שמו�
       setSlugManuallyEdited(true);
     }
   }
+
+  // ── Inline children helpers ──
+
+  function addChild() {
+    setChildren((rows) => [
+      ...rows,
+      { name: "", nameEn: "", slug: "", slugManuallyEdited: false },
+    ]);
+  }
+  function updateChild(idx: number, patch: Partial<ChildDraft>) {
+    setChildren((rows) =>
+      rows.map((r, i) => {
+        if (i !== idx) return r;
+        const next = { ...r, ...patch };
+        // Auto-derive slug from nameEn as the user types, until they touch it
+        if (patch.nameEn !== undefined && !next.slugManuallyEdited) {
+          next.slug = slugify(patch.nameEn);
+        }
+        if (patch.slug !== undefined) {
+          next.slugManuallyEdited = patch.slug !== "";
+          if (patch.slug === "") next.slug = slugify(next.nameEn);
+        }
+        return next;
+      }),
+    );
+  }
+  function removeChild(idx: number) {
+    setChildren((rows) => rows.filter((_, i) => i !== idx));
+  }
+
+  // Serialize children for the server action — only valid rows (name + slug)
+  const childrenPayload = useMemo(
+    () =>
+      JSON.stringify(
+        children
+          .filter((c) => c.name.trim() && c.slug.trim() && c.nameEn.trim())
+          .map((c) => ({
+            id: c.id,
+            name: c.name.trim(),
+            nameEn: c.nameEn.trim(),
+            slug: c.slug.trim(),
+          })),
+      ),
+    [children],
+  );
 
   return (
     <form action={formAction} className="space-y-6 max-w-[800px]">
@@ -145,41 +221,97 @@ export function CategoryForm({ category, parents, action, submitLabel = "שמו�
       </Section>
 
       <Section title="היררכיה">
-        <CheckboxField
-          label="זוהי תת-קטגוריה תחת קטגוריה אחרת"
-          name="__isSubcategory"
-          checked={isSubcategory}
-          onChange={(v) => {
-            setIsSubcategory(v);
-            if (!v) setParentId("");
-          }}
-        />
-        {isSubcategory && (
-          <label className="block">
-            <span className="text-[0.78rem] tracking-[0.1em] uppercase text-muted-foreground mb-1.5 block">
-              קטגוריית-אב <span className="text-destructive mr-1">*</span>
-            </span>
-            <select
-              name="parentId"
-              value={parentId}
-              onChange={(e) => setParentId(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 border border-border bg-background focus:outline-none focus:border-foreground text-sm rounded-md"
-            >
-              <option value="">בחרו קטגוריה...</option>
-              {parents.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            <span className="text-[11px] text-muted-foreground mt-1 block">
-              הקטגוריה תופיע בנאב מתחת לקטגוריה שתבחרי, כשרחפת על שמה.
-            </span>
-          </label>
-        )}
+        {/* Parent selector — leave on "ללא" to make this a top-level category */}
+        <label className="block">
+          <span className="text-[0.78rem] tracking-[0.1em] uppercase text-muted-foreground mb-1.5 block">
+            קטגוריית-אב
+          </span>
+          <select
+            name="parentId"
+            value={parentId}
+            onChange={(e) => setParentId(e.target.value)}
+            className="w-full px-4 py-2.5 border border-border bg-background focus:outline-none focus:border-foreground text-sm rounded-md"
+          >
+            <option value="">ללא — זוהי קטגוריה ראשית</option>
+            {parents.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <span className="text-[11px] text-muted-foreground mt-1 block">
+            {isSubcategory
+              ? "הקטגוריה תופיע ב-dropdown מתחת לקטגוריית-האב, כשרחפים עליה."
+              : "ראשית — תוכלי להוסיף לה תתי-קטגוריות בהמשך."}
+          </span>
+        </label>
+
+        {/* Inline subcategories editor — only when this is a top-level category */}
         {!isSubcategory && (
-          <input type="hidden" name="parentId" value="" />
+          <div className="pt-5 border-t border-border">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h4 className="text-sm font-medium text-foreground">תתי-קטגוריות</h4>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  פתחי כמה שאת רוצה — יופיעו ב-dropdown מתחת לקטגוריה הזו בנאב.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addChild}
+                className="inline-flex items-center gap-1.5 text-[0.82rem] font-medium px-3 py-1.5 rounded-md bg-brand-accent text-white hover:bg-brand-accent-dark transition-colors"
+              >
+                <Plus className="size-3.5" />
+                הוסף תת-קטגוריה
+              </button>
+            </div>
+
+            {children.length === 0 ? (
+              <div className="text-center py-6 border border-dashed border-border rounded-md text-[0.85rem] text-muted-foreground">
+                אין תתי-קטגוריות כרגע. לחצי "+ הוסף תת-קטגוריה" כדי לפתוח אחת.
+              </div>
+            ) : (
+              <ul className="space-y-2.5 list-none">
+                {children.map((c, idx) => (
+                  <li
+                    key={c.id ?? `new-${idx}`}
+                    className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end p-3 bg-muted/30 border border-border rounded-md"
+                  >
+                    <ChildField
+                      label="שם בעברית"
+                      value={c.name}
+                      onChange={(v) => updateChild(idx, { name: v })}
+                      required
+                    />
+                    <ChildField
+                      label="שם באנגלית"
+                      value={c.nameEn}
+                      onChange={(v) => updateChild(idx, { nameEn: v })}
+                      required
+                    />
+                    <ChildField
+                      label="Slug"
+                      value={c.slug}
+                      onChange={(v) => updateChild(idx, { slug: v })}
+                      dir="ltr"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeChild(idx)}
+                      className="size-9 grid place-items-center rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                      title="הסר תת-קטגוריה"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Hidden — serialized for the server action */}
+            <input type="hidden" name="children" value={childrenPayload} />
+          </div>
         )}
       </Section>
 
@@ -353,6 +485,40 @@ function CheckboxField({
         className="w-4 h-4 accent-brand-primary"
       />
       <span className="text-sm text-foreground">{label}</span>
+    </label>
+  );
+}
+
+/**
+ * Compact input used inside the inline subcategories editor.
+ * Smaller / tighter than ControlledField — fits 3 across in a row.
+ */
+function ChildField({
+  label,
+  value,
+  onChange,
+  required,
+  dir,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  dir?: "ltr" | "rtl";
+}) {
+  return (
+    <label className="block">
+      <span className="text-[10px] tracking-[0.12em] uppercase text-muted-foreground mb-1 block">
+        {label}
+        {required && <span className="text-destructive mr-1">*</span>}
+      </span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        dir={dir}
+        className="w-full px-2.5 py-1.5 border border-border bg-background focus:outline-none focus:border-foreground text-sm rounded-md"
+      />
     </label>
   );
 }

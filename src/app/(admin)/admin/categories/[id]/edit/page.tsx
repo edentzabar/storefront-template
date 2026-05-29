@@ -14,14 +14,20 @@ type Params = { params: Promise<{ id: string }> };
 
 export default async function EditCategoryPage({ params }: Params) {
   const { id } = await params;
-  const category = await prisma.category.findUnique({ where: { id } });
+  const [category, existingChildren] = await Promise.all([
+    prisma.category.findUnique({ where: { id } }),
+    prisma.category.findMany({
+      where: { parentId: id },
+      select: { id: true, name: true, nameEn: true, slug: true },
+      orderBy: { sortOrder: "asc" },
+    }),
+  ]);
   if (!category) notFound();
 
   // Available parents = top-level categories except this one (no self-ref).
   // If this category has its own children, it can't become a subcategory
-  // (would create a 3-level tree, which we don't support). In that case
-  // we hand an empty parents list so the form's toggle is moot.
-  const hasChildren = (await prisma.category.count({ where: { parentId: id } })) > 0;
+  // (would create a 3-level tree).
+  const hasChildren = existingChildren.length > 0;
   const parents = hasChildren
     ? []
     : await prisma.category.findMany({
@@ -38,6 +44,7 @@ export default async function EditCategoryPage({ params }: Params) {
       <CategoryForm
         category={category}
         parents={parents}
+        existingChildren={existingChildren}
         action={boundAction}
         submitLabel="שמור שינויים"
       />
