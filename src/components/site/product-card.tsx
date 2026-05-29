@@ -31,28 +31,17 @@ export function ProductCard({ product }: Props) {
           />
 
           {/* Top-right corner: ONE chip wins. Out-of-stock outranks
-              the sale/new badge — you can't buy it anyway, so
+              the regular badge — you can't buy it anyway, so a
               "20% הנחה" next to "אזל המלאי" would be misleading.
-              All chips share the translucent /85 + backdrop-blur
-              aesthetic so they recede into the photo. */}
-          {outOfStock ? (
+              All chips share ONE uniform style — translucent
+              brand-primary + backdrop-blur — so the cards look
+              consistent regardless of badge type. (badgeType field
+              still exists on the model for backwards compat, but
+              the admin form no longer sets it.) */}
+          {(outOfStock || product.badge) && (
             <span className="absolute top-3.5 right-3.5 inline-flex items-center px-2.5 py-1 text-[0.7rem] tracking-wider uppercase font-medium bg-brand-primary/85 text-white backdrop-blur-sm">
-              אזל המלאי
+              {outOfStock ? "אזל המלאי" : product.badge}
             </span>
-          ) : (
-            product.badge && (
-              <span
-                className={`absolute top-3.5 right-3.5 inline-flex items-center px-2.5 py-1 text-[0.7rem] tracking-wider uppercase font-medium backdrop-blur-sm ${
-                  product.badgeType === "sale"
-                    ? "bg-brand-accent/85 text-white"
-                    : product.badgeType === "new"
-                    ? "bg-brand-primary/85 text-white"
-                    : "bg-white/85 text-brand-primary border border-brand-border"
-                }`}
-              >
-                {product.badge}
-              </span>
-            )
           )}
 
           <WishlistButton productId={product.id} />

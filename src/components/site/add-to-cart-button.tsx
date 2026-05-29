@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/stores/cart-store";
 import { flyToCart } from "@/lib/fly-to-cart";
@@ -102,12 +101,20 @@ export function AddToCartButton({
           // Centered at the bottom of the card image. Translucent
           // brand-primary + backdrop-blur matches the badge aesthetic
           // ("אזל המלאי" etc.) so the button doesn't visually shout
-          // over the product photo. min-h-11 = 44px touch target.
-          "absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center justify-center gap-1.5 px-4 min-h-11 bg-brand-primary/85 backdrop-blur-sm text-white rounded-full active:scale-95 transition-transform z-10 text-sm font-medium",
+          // over the product photo.
+          //
+          // No icon: text + icon was overflowing onto a second line
+          // on small phones (≤375px in a 2-col grid). Text alone
+          // stays on one line with whitespace-nowrap and is clearer
+          // anyway — the pill shape already signals "tap me".
+          //
+          // cursor-pointer because Tailwind's reset sets buttons to
+          // cursor:default by default, which made the pill feel
+          // non-interactive next to the image (which IS pointer).
+          "absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center justify-center px-4 min-h-11 bg-brand-primary/85 backdrop-blur-sm text-white rounded-full active:scale-95 transition-transform z-10 text-sm font-medium cursor-pointer whitespace-nowrap",
           className,
         )}
       >
-        <ShoppingBag className="w-4 h-4 stroke-[1.75]" />
         {label}
       </button>
     );

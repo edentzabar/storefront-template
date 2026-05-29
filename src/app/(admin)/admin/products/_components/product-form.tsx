@@ -43,8 +43,6 @@ export function ProductForm({ categories, product, action, submitLabel = "שמו
   const [state, formAction, pending] = useActionState(action, initialState);
 
   const initialImages = (product?.images as string[] | null) ?? [];
-  const sizes = (product?.sizes as string[] | null) ?? [];
-  const specs = (product?.specs as Record<string, string> | null) ?? {};
 
   const [mainImage, setMainImage] = useState(product?.image ?? "");
   const [images, setImages] = useState<string[]>(initialImages);
@@ -258,25 +256,13 @@ export function ProductForm({ categories, product, action, submitLabel = "שמו
             error={state.fieldErrors?.stock}
           />
         </Grid>
-        <Grid>
-          <ControlledField
-            label="תווית (badge)"
-            name="badge"
-            defaultValue={product?.badge ?? ""}
-            help='טקסט קצר על תמונת המוצר — "חדש", "מבצע", "נמכר"'
-            error={state.fieldErrors?.badge}
-          />
-          <SelectField
-            label="צבע התווית"
-            name="badgeType"
-            defaultValue={product?.badgeType ?? ""}
-            options={[
-              { value: "", label: "ללא" },
-              { value: "new", label: "חדש (כהה)" },
-              { value: "sale", label: "מבצע (זהב)" },
-            ]}
-          />
-        </Grid>
+        <ControlledField
+          label="תווית (badge)"
+          name="badge"
+          defaultValue={product?.badge ?? ""}
+          help='טקסט קצר על תמונת המוצר — "חדש", "מבצע", "נמכר". כל התוויות מוצגות באותו עיצוב.'
+          error={state.fieldErrors?.badge}
+        />
       </Section>
 
       <Section title="תמונות">
@@ -300,23 +286,12 @@ export function ProductForm({ categories, product, action, submitLabel = "שמו
         />
       </Section>
 
-      <Section title="מפרט ומידות">
-        <TextareaField
-          label="מפרט טכני"
-          name="specsText"
-          defaultValue={Object.entries(specs)
-            .map(([k, v]) => `${k}: ${v}`)
-            .join("\n")}
-          rows={5}
-          help='שורה לכל פריט בפורמט "מפתח: ערך" — למשל: חומר: כותנה'
-        />
-        <ControlledField
-          label="מידות זמינות"
-          name="sizesText"
-          defaultValue={sizes.join(", ")}
-          help="מופרדות בפסיק. השאר ריק אם המוצר לא דורש מידה — למשל שרשרת"
-        />
-      </Section>
+      {/* "מפרט ומידות" intentionally NOT in the template — too
+          product-specific (jewelry care vs clothing fabric vs
+          electronics specs). Each client adds the fields relevant
+          to their catalog. The product-detail page still renders
+          specs/sizes if the data exists; the admin form just
+          doesn't edit them in the generic template. */}
 
       <Section title="הצגה">
         <Grid>
