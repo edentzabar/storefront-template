@@ -8,6 +8,7 @@ import type { Product, Category } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
 import { AddToCartButton } from "./add-to-cart-button";
+import { RestockForm } from "./restock-form";
 import { WishlistButton } from "./wishlist-button";
 import {
   Accordion,
@@ -186,16 +187,24 @@ export function ProductDetail({ product, category }: Props) {
             </div>
           </div>
 
-          {/* Big primary CTA — full width */}
-          <AddToCartButton
-            product={product}
-            size={size}
-            qty={qty}
-            openCart
-            requireSize={requiresSize}
-            className="w-full py-5 text-[0.85rem] tracking-[0.25em] mb-8"
-            label="הוספה לעגלה"
-          />
+          {/* Big primary CTA — full width.
+              When out of stock, swap the button for a restock waitlist
+              form so the visitor can leave their email + get notified. */}
+          {product.stock > 0 ? (
+            <AddToCartButton
+              product={product}
+              size={size}
+              qty={qty}
+              openCart
+              requireSize={requiresSize}
+              className="w-full py-5 text-[0.85rem] tracking-[0.25em] mb-8"
+              label="הוספה לעגלה"
+            />
+          ) : (
+            <div className="mb-8">
+              <RestockForm productId={product.id} />
+            </div>
+          )}
 
           {/* Trust bullets — pills layout, easier to scan */}
           <ul className="grid grid-cols-2 gap-x-4 gap-y-2.5 mb-8 text-[0.85rem] text-brand-text font-light">

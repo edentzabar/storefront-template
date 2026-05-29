@@ -45,6 +45,7 @@ export function HeaderActions() {
         type="button"
         onClick={cartOpen}
         aria-label="עגלה"
+        data-cart-icon
         className="relative inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 hover:bg-brand-bg-soft transition-colors"
       >
         <ShoppingBag className="w-[19px] h-[19px] stroke-[1.5]" />

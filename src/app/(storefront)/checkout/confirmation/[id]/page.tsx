@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
+import { OrderConfetti } from "@/components/site/order-confetti";
 import { getOrderForCustomer } from "@/lib/orders-actions";
 import { formatPrice } from "@/lib/format";
 
@@ -19,6 +20,9 @@ export default async function ConfirmationPage({ params }: Params) {
 
   return (
     <>
+      {/* Brand-tinted celebration burst on mount — only when there's
+          actually an order to celebrate. */}
+      {order && <OrderConfetti />}
       <Breadcrumbs items={[{ label: "בית", href: "/" }, { label: "אישור הזמנה" }]} />
       <main className="py-16 px-6 lg:px-10">
         {!order ? (

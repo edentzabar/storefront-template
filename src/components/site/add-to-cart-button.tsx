@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/stores/cart-store";
+import { flyToCart } from "@/lib/fly-to-cart";
 import type { Product } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,10 @@ type Props = {
   requireSize?: boolean;
   className?: string;
   label?: string;
+  /** Optional element to fly into the cart icon. If not given we fly
+   *  the button itself. The product detail page passes its big main
+   *  image; product cards pass their thumbnail. */
+  flySource?: React.RefObject<HTMLElement | null>;
 };
 
 export function AddToCartButton({
@@ -26,10 +31,12 @@ export function AddToCartButton({
   requireSize = false,
   className,
   label = "הוספה לעגלה",
+  flySource,
 }: Props) {
   const add = useCart((s) => s.add);
   const setOpen = useCart((s) => s.setOpen);
   const [busy, setBusy] = useState(false);
+  const selfRef = useRef<HTMLButtonElement>(null);
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
@@ -39,6 +46,9 @@ export function AddToCartButton({
       return;
     }
     setBusy(true);
+    // Fire the fly animation BEFORE add() so the source image is still
+    // mounted in case add() triggers a re-render.
+    flyToCart(flySource?.current ?? selfRef.current);
     add(product, qty, size);
     toast.success(`${product.name} נוסף לעגלה`);
     if (openCart) setOpen(true);
@@ -48,6 +58,7 @@ export function AddToCartButton({
   if (variant === "overlay") {
     return (
       <button
+        ref={selfRef}
         type="button"
         onClick={handleClick}
         disabled={busy}
@@ -63,6 +74,7 @@ export function AddToCartButton({
 
   return (
     <button
+      ref={selfRef}
       type="button"
       onClick={handleClick}
       disabled={busy}

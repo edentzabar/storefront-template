@@ -273,6 +273,22 @@ model SiteSetting {
   @@map("site_setting")
 }
 
+/** "Email me when this is back in stock" signups. Each row is one
+ *  customer waiting on one product. When stock returns we send to all
+ *  un-notified rows for that product, then mark them notifiedAt = now.
+ *  Unique on (productId, email) so the same person can't queue twice. */
+model RestockNotification {
+  id         String   @id @default(cuid())
+  productId  String
+  email      String
+  createdAt  DateTime @default(now())
+  notifiedAt DateTime?
+
+  @@unique([productId, email])
+  @@index([productId, notifiedAt])
+  @@map("restock_notification")
+}
+
 model PopupCampaign {
   id            String         @id @default(cuid())
   name          String // internal name, for admin only

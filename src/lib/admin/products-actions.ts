@@ -140,6 +140,14 @@ export async function updateProduct(
     return { ok: false, error: "ולידציה נכשלה", fieldErrors: fe };
   }
   const { images, specs, sizes } = parseTextLists(parsed.data);
+  // Detect 0 → >0 transition so we can fire the restock waitlist
+  // notifications afterwards. Fetch the current stock first.
+  const previous = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { stock: true },
+  });
+  const wasOutOfStock = (previous?.stock ?? 0) === 0;
+  const willBeInStock = parsed.data.stock > 0;
   try {
     await prisma.product.update({
       where: { id: productId },
@@ -168,6 +176,12 @@ export async function updateProduct(
     });
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "שגיאה בעדכון" };
+  }
+  // Restock notification — fire-and-forget. Lazy-imported so this
+  // dependency doesn't load when stock didn't transition.
+  if (wasOutOfStock && willBeInStock) {
+    const { notifyRestockWaitlist } = await import("@/lib/restock-actions");
+    notifyRestockWaitlist(productId).catch(() => {});
   }
   revalidatePath("/admin/products");
   revalidatePath(`/product/${parsed.data.slug}`);
