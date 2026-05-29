@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/stores/cart-store";
 import { flyToCart } from "@/lib/fly-to-cart";
@@ -17,7 +18,14 @@ type Props = {
    *  progress bar lives, which is our strongest upsell. Pass `false`
    *  if you specifically want a quiet add (rare). */
   openCart?: boolean;
-  variant?: "primary" | "overlay";
+  /**
+   * - `primary`: full-width bar — product detail page.
+   * - `overlay`: bottom-of-image bar revealed on hover — desktop card
+   *   listings. Useless on mobile (no hover).
+   * - `icon`: small circular bag button in the corner — always
+   *   visible, optimized for mobile card listings.
+   */
+  variant?: "primary" | "overlay" | "icon";
   requireSize?: boolean;
   className?: string;
   label?: string;
@@ -77,6 +85,27 @@ export function AddToCartButton({
         )}
       >
         {label}
+      </button>
+    );
+  }
+
+  if (variant === "icon") {
+    return (
+      <button
+        ref={selfRef}
+        type="button"
+        onClick={handleClick}
+        disabled={busy}
+        aria-label={label}
+        className={cn(
+          // 44px hit target = Apple HIG minimum. bottom-right matches
+          // the natural "primary action" spot in RTL Hebrew reading
+          // (wishlist at top-left is the secondary save action).
+          "absolute bottom-3 right-3 w-11 h-11 inline-flex items-center justify-center bg-brand-primary text-white rounded-full shadow-md active:scale-90 transition-transform z-10",
+          className,
+        )}
+      >
+        <ShoppingBag className="w-[18px] h-[18px] stroke-[1.75]" />
       </button>
     );
   }

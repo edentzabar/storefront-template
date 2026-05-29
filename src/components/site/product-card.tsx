@@ -30,40 +30,63 @@ export function ProductCard({ product }: Props) {
             itemProp="image"
           />
 
-          {/* Sold-out chip — top-left so it never collides with the
-              sale/new badge on top-right. Always wins visually because
-              it's the most important fact about the product. */}
-          {outOfStock && (
-            <span className="absolute top-3.5 left-3.5 inline-flex items-center px-2.5 py-1 text-[0.7rem] tracking-wider uppercase font-medium bg-brand-primary/85 text-white backdrop-blur-sm">
+          {/* Top-right corner: ONE chip wins. Out-of-stock outranks
+              the sale/new badge because availability is the most
+              important fact about the product. */}
+          {outOfStock ? (
+            <span className="absolute top-3.5 right-3.5 inline-flex items-center px-2.5 py-1 text-[0.7rem] tracking-wider uppercase font-medium bg-brand-primary/85 text-white backdrop-blur-sm">
               אזל המלאי
             </span>
-          )}
-
-          {product.badge && (
-            <span
-              className={`absolute top-3.5 right-3.5 inline-flex items-center px-2.5 py-1 text-[0.7rem] tracking-wider uppercase font-medium ${
-                product.badgeType === "sale"
-                  ? "bg-brand-accent text-white"
-                  : product.badgeType === "new"
-                  ? "bg-brand-primary text-white"
-                  : "bg-white text-brand-primary border border-brand-border"
-              }`}
-            >
-              {product.badge}
-            </span>
+          ) : (
+            product.badge && (
+              <span
+                className={`absolute top-3.5 right-3.5 inline-flex items-center px-2.5 py-1 text-[0.7rem] tracking-wider uppercase font-medium ${
+                  product.badgeType === "sale"
+                    ? "bg-brand-accent text-white"
+                    : product.badgeType === "new"
+                    ? "bg-brand-primary text-white"
+                    : "bg-white text-brand-primary border border-brand-border"
+                }`}
+              >
+                {product.badge}
+              </span>
+            )
           )}
 
           <WishlistButton productId={product.id} />
 
-          {/* Out-of-stock — replace the add-to-cart overlay with a
-              non-interactive "join waitlist" hint that links into the
-              product detail (where the email-capture form lives). */}
           {outOfStock ? (
-            <div className="absolute bottom-0 left-0 right-0 px-4 py-3.5 bg-brand-primary/85 backdrop-blur-sm text-white text-[0.72rem] tracking-[0.2em] uppercase font-medium text-center translate-y-full group-hover:translate-y-0 transition-transform duration-400 ease-out">
-              להודיע לי כשחוזר
-            </div>
+            <>
+              {/* Mobile: small "אזל" pill in the corner — non-interactive,
+                  tapping the card itself takes you to the detail page
+                  where the restock waitlist form lives. */}
+              <span className="md:hidden absolute bottom-3 right-3 px-3 py-1.5 bg-brand-primary/85 backdrop-blur-sm text-white text-[0.7rem] uppercase tracking-wider rounded-full">
+                אזל
+              </span>
+              {/* Desktop: hover reveals the waitlist CTA bar. */}
+              <div className="hidden md:block absolute bottom-0 left-0 right-0 px-4 py-3.5 bg-brand-primary/85 backdrop-blur-sm text-white text-[0.72rem] tracking-[0.2em] uppercase font-medium text-center translate-y-full group-hover:translate-y-0 transition-transform duration-400 ease-out">
+                להודיע לי כשחוזר
+              </div>
+            </>
           ) : (
-            <AddToCartButton product={product} variant="overlay" label="הוספה לעגלה" />
+            <>
+              {/* Mobile: 44px tap target, always visible. No hover on
+                  touch = no point hiding it. */}
+              <AddToCartButton
+                product={product}
+                variant="icon"
+                label="הוספה לעגלה"
+                className="md:hidden"
+              />
+              {/* Desktop: full bar on hover, looks lighter than a
+                  permanent button. */}
+              <AddToCartButton
+                product={product}
+                variant="overlay"
+                label="הוספה לעגלה"
+                className="hidden md:block"
+              />
+            </>
           )}
         </div>
 
