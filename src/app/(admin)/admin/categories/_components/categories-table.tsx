@@ -231,16 +231,16 @@ export function CategoriesTable({
                       onDelete={() => setToDelete(top)}
                       deleting={pending}
                     >
-                      {/* Subcategory rows render only when parent is expanded */}
-                      {isOpen &&
-                        kids.map((sub) => (
-                          <SubcategoryRow
-                            key={sub.id}
-                            category={sub}
-                            onDelete={() => setToDelete(sub)}
-                            deleting={pending}
-                          />
-                        ))}
+                      {/* Expanded children panel — compact, indented,
+                          visually distinct from full parent rows */}
+                      {isOpen && kids.length > 0 && (
+                        <ChildrenPanel
+                          parentName={top.name}
+                          children={kids}
+                          onDelete={(c) => setToDelete(c)}
+                          deleting={pending}
+                        />
+                      )}
                     </TopLevelRow>
                   );
                 })}
@@ -361,22 +361,88 @@ function TopLevelRow({
   );
 }
 
-/** Plain row for subcategories — no drag handle (reorder them via the
- *  parent's edit form). Indented + flagged with a "תת-קטגוריה" chip. */
-function SubcategoryRow({
-  category: c,
+/**
+ * The expanded children panel — rendered as ONE table row spanning all
+ * columns. Inside, children render as a compact pill-list so they
+ * read as "items under this category" rather than "more categories".
+ * To reorder children, edit the parent.
+ */
+function ChildrenPanel({
+  parentName,
+  children,
   onDelete,
   deleting,
 }: {
-  category: CategoryRowWithAggregate;
-  onDelete: () => void;
+  parentName: string;
+  children: CategoryRowWithAggregate[];
+  onDelete: (c: CategoryRowWithAggregate) => void;
   deleting: boolean;
 }) {
   return (
-    <tr className="hover:bg-muted/30 transition-colors bg-muted/10">
-      <td className="px-2 py-3" />
-      <td className="px-2 py-3" />
-      <CommonRowCells category={c} onDelete={onDelete} deleting={deleting} />
+    <tr className="bg-brand-bg-soft/40 dark:bg-muted/20">
+      <td className="px-0 py-0" />
+      <td className="px-0 py-0" />
+      <td colSpan={5} className="px-4 py-3">
+        <div className="me-2">
+          <div className="text-[10px] tracking-[0.18em] uppercase text-muted-foreground mb-2 flex items-center gap-2">
+            <span aria-hidden>↳</span>
+            תתי-קטגוריות של "{parentName}"
+            <span className="text-[10px] text-muted-foreground/70 normal-case tracking-normal">
+              ({children.length})
+            </span>
+          </div>
+          <ul className="list-none space-y-1.5 border-s-2 border-brand-accent/30 ps-3">
+            {children.map((sub) => (
+              <li
+                key={sub.id}
+                className="flex items-center gap-3 px-3 py-2 bg-card border border-border rounded-md group hover:border-brand-accent/40 transition-colors"
+              >
+                <Link
+                  href={`/admin/categories/${sub.id}/edit`}
+                  className="flex-1 min-w-0 text-sm text-foreground hover:text-brand-accent transition-colors no-underline truncate"
+                >
+                  <span className="font-medium">{sub.name}</span>
+                  <span className="text-[11px] text-muted-foreground ms-2">
+                    {sub.nameEn}
+                  </span>
+                </Link>
+                <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
+                  {sub.aggregateProductCount}{" "}
+                  {sub.aggregateProductCount === 1 ? "מוצר" : "מוצרים"}
+                </span>
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "text-[9px] px-1.5 py-0 font-medium border-0 shrink-0",
+                    sub.isActive
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {sub.isActive ? "פעיל" : "מוסתר"}
+                </Badge>
+                <div className="flex items-center gap-0.5 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+                  <Link
+                    href={`/admin/categories/${sub.id}/edit`}
+                    className="inline-flex items-center justify-center size-7 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    title="ערוך"
+                  >
+                    <Pencil className="size-3.5" />
+                  </Link>
+                  <button
+                    onClick={() => onDelete(sub)}
+                    disabled={deleting}
+                    className="inline-flex items-center justify-center size-7 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
+                    title="מחק"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </td>
     </tr>
   );
 }
