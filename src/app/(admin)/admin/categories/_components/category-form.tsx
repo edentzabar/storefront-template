@@ -2,14 +2,34 @@
 
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, GripVertical } from "lucide-react";
 import type { Category } from "@prisma/client";
 import type { CategoryFormState } from "@/lib/admin/categories-actions";
 import { cn } from "@/lib/utils";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 /** A subcategory row in the inline children editor. */
 type ChildDraft = {
+  /** Stable client-side key for DnD (independent of DB id, so new rows
+   *  also drag cleanly before they're saved) */
+  _key: string;
   /** undefined for a brand-new row, set for an existing child loaded from the DB */
   id?: string;
   name: string;
@@ -18,6 +38,12 @@ type ChildDraft = {
   /** true if the user manually edited the slug — otherwise it tracks nameEn */
   slugManuallyEdited: boolean;
 };
+
+let _keyCounter = 0;
+function nextKey() {
+  _keyCounter += 1;
+  return `child-${_keyCounter}-${Date.now()}`;
+}
 
 type Props = {
   category?: Category | null;
@@ -59,9 +85,11 @@ export function CategoryForm({
   const isSubcategory = Boolean(parentId);
 
   // Inline subcategory rows — only meaningful when this category is top-level.
-  // Pre-fill from DB on edit.
+  // Pre-fill from DB on edit. The order in this array IS the saved order
+  // (server uses array index as sortOrder).
   const [children, setChildren] = useState<ChildDraft[]>(() =>
     existingChildren.map((c) => ({
+      _key: nextKey(),
       id: c.id,
       name: c.name,
       nameEn: c.nameEn,
@@ -69,6 +97,21 @@ export function CategoryForm({
       slugManuallyEdited: true, // already saved → don't auto-override
     })),
   );
+
+  // DnD setup — pointer + keyboard for accessibility
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    setChildren((rows) => {
+      const oldIndex = rows.findIndex((r) => r._key === active.id);
+      const newIndex = rows.findIndex((r) => r._key === over.id);
+      return arrayMove(rows, oldIndex, newIndex);
+    });
+  }
   // Treat existing categories as having a manually-set slug. For new ones,
   // auto-update slug from nameEn until the user types in the slug field.
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(Boolean(category));
@@ -96,15 +139,18 @@ export function CategoryForm({
   function addChild() {
     setChildren((rows) => [
       ...rows,
-      { name: "", nameEn: "", slug: "", slugManuallyEdited: false },
+      { _key: nextKey(), name: "", nameEn: "", slug: "", slugManuallyEdited: false },
     ]);
   }
-  function updateChild(idx: number, patch: Partial<ChildDraft>) {
+  // (Legacy index-based helpers replaced by key-based ones — see below)
+  function removeChildByKey(key: string) {
+    setChildren((rows) => rows.filter((r) => r._key !== key));
+  }
+  function updateChildByKey(key: string, patch: Partial<ChildDraft>) {
     setChildren((rows) =>
-      rows.map((r, i) => {
-        if (i !== idx) return r;
+      rows.map((r) => {
+        if (r._key !== key) return r;
         const next = { ...r, ...patch };
-        // Auto-derive slug from nameEn as the user types, until they touch it
         if (patch.nameEn !== undefined && !next.slugManuallyEdited) {
           next.slug = slugify(patch.nameEn);
         }
@@ -115,9 +161,6 @@ export function CategoryForm({
         return next;
       }),
     );
-  }
-  function removeChild(idx: number) {
-    setChildren((rows) => rows.filter((_, i) => i !== idx));
   }
 
   // Serialize children for the server action — only valid rows (name + slug)
@@ -271,42 +314,27 @@ export function CategoryForm({
                 אין תתי-קטגוריות כרגע. לחצי "+ הוסף תת-קטגוריה" כדי לפתוח אחת.
               </div>
             ) : (
-              <ul className="space-y-2.5 list-none">
-                {children.map((c, idx) => (
-                  <li
-                    key={c.id ?? `new-${idx}`}
-                    className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end p-3 bg-muted/30 border border-border rounded-md"
-                  >
-                    <ChildField
-                      label="שם בעברית"
-                      value={c.name}
-                      onChange={(v) => updateChild(idx, { name: v })}
-                      required
-                    />
-                    <ChildField
-                      label="שם באנגלית"
-                      value={c.nameEn}
-                      onChange={(v) => updateChild(idx, { nameEn: v })}
-                      required
-                    />
-                    <ChildField
-                      label="Slug"
-                      value={c.slug}
-                      onChange={(v) => updateChild(idx, { slug: v })}
-                      dir="ltr"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeChild(idx)}
-                      className="size-9 grid place-items-center rounded-md text-destructive hover:bg-destructive/10 transition-colors"
-                      title="הסר תת-קטגוריה"
-                    >
-                      <X className="size-4" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={children.map((c) => c._key)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <ul className="space-y-2.5 list-none">
+                    {children.map((c) => (
+                      <SortableChildRow
+                        key={c._key}
+                        child={c}
+                        onChange={(patch) => updateChildByKey(c._key, patch)}
+                        onRemove={() => removeChildByKey(c._key)}
+                      />
+                    ))}
+                  </ul>
+                </SortableContext>
+              </DndContext>
             )}
 
             {/* Hidden — serialized for the server action */}
@@ -486,6 +514,83 @@ function CheckboxField({
       />
       <span className="text-sm text-foreground">{label}</span>
     </label>
+  );
+}
+
+/**
+ * A draggable subcategory row. Grip icon on the right (RTL = visual
+ * start) is the drag handle. The form inputs themselves are NOT
+ * draggable so typing in them works normally.
+ */
+function SortableChildRow({
+  child,
+  onChange,
+  onRemove,
+}: {
+  child: ChildDraft;
+  onChange: (patch: Partial<ChildDraft>) => void;
+  onRemove: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: child._key });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+      className={cn(
+        "grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 items-end p-3 bg-muted/30 border border-border rounded-md",
+        isDragging && "shadow-lg ring-2 ring-brand-accent/40 bg-card",
+      )}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="size-9 grid place-items-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted cursor-grab active:cursor-grabbing touch-none self-end"
+        title="גרור לשינוי סדר"
+        aria-label="שינוי סדר"
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <ChildField
+        label="שם בעברית"
+        value={child.name}
+        onChange={(v) => onChange({ name: v })}
+        required
+      />
+      <ChildField
+        label="שם באנגלית"
+        value={child.nameEn}
+        onChange={(v) => onChange({ nameEn: v })}
+        required
+      />
+      <ChildField
+        label="Slug"
+        value={child.slug}
+        onChange={(v) => onChange({ slug: v })}
+        dir="ltr"
+        required
+      />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="size-9 grid place-items-center rounded-md text-destructive hover:bg-destructive/10 transition-colors self-end"
+        title="הסר תת-קטגוריה"
+      >
+        <X className="size-4" />
+      </button>
+    </li>
   );
 }
 

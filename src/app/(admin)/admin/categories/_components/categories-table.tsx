@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useTransition } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import { Pencil, Trash2, ChevronDown, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import type { Prisma } from "@prisma/client";
 import {
@@ -27,6 +27,40 @@ type CategoryRow = Prisma.CategoryGetPayload<{
 export function CategoriesTable({ categories }: { categories: CategoryRow[] }) {
   const [pending, startTransition] = useTransition();
   const [toDelete, setToDelete] = useState<CategoryRow | null>(null);
+  // Expansion state — set of top-level ids whose children are visible.
+  // Default: all collapsed (cleaner for stores with many subcategories).
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  // Index parents that actually HAVE children — used both to know
+  // which rows get the chevron and which appear in expand-all toggle.
+  const parentsWithChildren = useMemo(() => {
+    const ids = new Set<string>();
+    for (const c of categories) {
+      if (c.parentId && c.parentId !== null) ids.add(c.parentId);
+    }
+    return ids;
+  }, [categories]);
+
+  const allExpanded =
+    parentsWithChildren.size > 0 &&
+    [...parentsWithChildren].every((id) => expanded.has(id));
+
+  function toggleParent(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function toggleAll() {
+    setExpanded(allExpanded ? new Set() : new Set(parentsWithChildren));
+  }
+
+  // Filter rows — subcategories only show if their parent is expanded
+  const visibleCategories = categories.filter(
+    (c) => c.parentId === null || expanded.has(c.parentId),
+  );
 
   function confirmDelete() {
     if (!toDelete) return;
@@ -55,10 +89,32 @@ export function CategoriesTable({ categories }: { categories: CategoryRow[] }) {
 
   return (
     <>
+      {parentsWithChildren.size > 0 && (
+        <div className="flex justify-end mb-3">
+          <button
+            onClick={toggleAll}
+            className="inline-flex items-center gap-1.5 text-[0.78rem] font-medium px-3 py-1.5 rounded-md border border-border bg-card hover:bg-muted transition-colors"
+            type="button"
+          >
+            {allExpanded ? (
+              <>
+                <ChevronDown className="size-3.5" />
+                סגור הכל
+              </>
+            ) : (
+              <>
+                <ChevronLeft className="size-3.5" />
+                פתח הכל
+              </>
+            )}
+          </button>
+        </div>
+      )}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="w-full">
           <thead className="bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
             <tr>
+              <th className="px-2 py-3 w-8"></th>
               <th className="px-4 py-3 text-right font-medium">תמונה</th>
               <th className="px-4 py-3 text-right font-medium">שם</th>
               <th className="px-4 py-3 text-right font-medium hidden md:table-cell">Slug</th>
@@ -69,8 +125,28 @@ export function CategoriesTable({ categories }: { categories: CategoryRow[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {categories.map((c) => (
+            {visibleCategories.map((c) => {
+              const hasKids = c.parentId === null && parentsWithChildren.has(c.id);
+              const isOpen = expanded.has(c.id);
+              return (
               <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+                <td className="px-2 py-3 align-middle text-center">
+                  {hasKids && (
+                    <button
+                      type="button"
+                      onClick={() => toggleParent(c.id)}
+                      className="size-6 inline-grid place-items-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={isOpen ? "סגור" : "פתח"}
+                      aria-expanded={isOpen}
+                    >
+                      {isOpen ? (
+                        <ChevronDown className="size-4" />
+                      ) : (
+                        <ChevronLeft className="size-4" />
+                      )}
+                    </button>
+                  )}
+                </td>
                 <td className="px-4 py-3 align-middle">
                   <div className="relative size-12 overflow-hidden rounded-md bg-muted">
                     {c.image && (
@@ -155,7 +231,8 @@ export function CategoriesTable({ categories }: { categories: CategoryRow[] }) {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
