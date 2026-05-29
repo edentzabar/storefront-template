@@ -11,6 +11,11 @@ type Props = {
   product: Product;
   size?: string | null;
   qty?: number;
+  /** Open the side-cart drawer after adding. Defaults to true — the
+   *  Israeli fashion convention (Castro / Fox / Renuar / Terminal X /
+   *  Factory54 all do this) and the drawer is where the free-shipping
+   *  progress bar lives, which is our strongest upsell. Pass `false`
+   *  if you specifically want a quiet add (rare). */
   openCart?: boolean;
   variant?: "primary" | "overlay";
   requireSize?: boolean;
@@ -26,7 +31,7 @@ export function AddToCartButton({
   product,
   size = null,
   qty = 1,
-  openCart = false,
+  openCart = true,
   variant = "primary",
   requireSize = false,
   className,
