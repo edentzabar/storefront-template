@@ -31,8 +31,10 @@ export function ProductCard({ product }: Props) {
           />
 
           {/* Top-right corner: ONE chip wins. Out-of-stock outranks
-              the sale/new badge because availability is the most
-              important fact about the product. */}
+              the sale/new badge — you can't buy it anyway, so
+              "20% הנחה" next to "אזל המלאי" would be misleading.
+              All chips share the translucent /85 + backdrop-blur
+              aesthetic so they recede into the photo. */}
           {outOfStock ? (
             <span className="absolute top-3.5 right-3.5 inline-flex items-center px-2.5 py-1 text-[0.7rem] tracking-wider uppercase font-medium bg-brand-primary/85 text-white backdrop-blur-sm">
               אזל המלאי
@@ -40,12 +42,12 @@ export function ProductCard({ product }: Props) {
           ) : (
             product.badge && (
               <span
-                className={`absolute top-3.5 right-3.5 inline-flex items-center px-2.5 py-1 text-[0.7rem] tracking-wider uppercase font-medium ${
+                className={`absolute top-3.5 right-3.5 inline-flex items-center px-2.5 py-1 text-[0.7rem] tracking-wider uppercase font-medium backdrop-blur-sm ${
                   product.badgeType === "sale"
-                    ? "bg-brand-accent text-white"
+                    ? "bg-brand-accent/85 text-white"
                     : product.badgeType === "new"
-                    ? "bg-brand-primary text-white"
-                    : "bg-white text-brand-primary border border-brand-border"
+                    ? "bg-brand-primary/85 text-white"
+                    : "bg-white/85 text-brand-primary border border-brand-border"
                 }`}
               >
                 {product.badge}
@@ -55,39 +57,16 @@ export function ProductCard({ product }: Props) {
 
           <WishlistButton productId={product.id} />
 
-          {outOfStock ? (
-            <>
-              {/* Mobile: small "אזל" pill in the corner — non-interactive,
-                  tapping the card itself takes you to the detail page
-                  where the restock waitlist form lives. */}
-              <span className="md:hidden absolute bottom-3 right-3 px-3 py-1.5 bg-brand-primary/85 backdrop-blur-sm text-white text-[0.7rem] uppercase tracking-wider rounded-full">
-                אזל
-              </span>
-              {/* Desktop: hover reveals the waitlist CTA bar. */}
-              <div className="hidden md:block absolute bottom-0 left-0 right-0 px-4 py-3.5 bg-brand-primary/85 backdrop-blur-sm text-white text-[0.72rem] tracking-[0.2em] uppercase font-medium text-center translate-y-full group-hover:translate-y-0 transition-transform duration-400 ease-out">
-                להודיע לי כשחוזר
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Mobile: text pill with bag icon, always visible.
-                  Short label "הוספה לסל" fits the small card width
-                  without overflow. */}
-              <AddToCartButton
-                product={product}
-                variant="compact"
-                label="הוספה לסל"
-                className="md:hidden"
-              />
-              {/* Desktop: full bar on hover, looks lighter than a
-                  permanent button. */}
-              <AddToCartButton
-                product={product}
-                variant="overlay"
-                label="הוספה לעגלה"
-                className="hidden md:block"
-              />
-            </>
+          {/* Out-of-stock: nothing at the bottom — the top-right
+              "אזל המלאי" badge already communicates it. Tapping the
+              card itself leads to the detail page where the restock
+              waitlist form lives. */}
+          {!outOfStock && (
+            <AddToCartButton
+              product={product}
+              variant="compact"
+              label="הוספה לסל"
+            />
           )}
         </div>
 

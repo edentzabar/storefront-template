@@ -99,11 +99,11 @@ export function AddToCartButton({
         disabled={busy}
         aria-label={label}
         className={cn(
-          // Pill anchored at bottom-right (RTL primary-action spot).
-          // min-h-11 = 44px to satisfy Apple HIG touch target while
-          // letting the text dictate the natural width. active:scale
-          // gives tactile feedback on tap since there's no hover.
-          "absolute bottom-3 right-3 inline-flex items-center justify-center gap-1.5 px-4 min-h-11 bg-brand-primary text-white rounded-full shadow-lg active:scale-95 transition-transform z-10 text-sm font-medium",
+          // Centered at the bottom of the card image. Translucent
+          // brand-primary + backdrop-blur matches the badge aesthetic
+          // ("אזל המלאי" etc.) so the button doesn't visually shout
+          // over the product photo. min-h-11 = 44px touch target.
+          "absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center justify-center gap-1.5 px-4 min-h-11 bg-brand-primary/85 backdrop-blur-sm text-white rounded-full active:scale-95 transition-transform z-10 text-sm font-medium",
           className,
         )}
       >
