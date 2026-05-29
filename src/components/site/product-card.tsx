@@ -70,12 +70,13 @@ export function ProductCard({ product }: Props) {
             </>
           ) : (
             <>
-              {/* Mobile: 44px tap target, always visible. No hover on
-                  touch = no point hiding it. */}
+              {/* Mobile: text pill with bag icon, always visible.
+                  Short label "הוספה לסל" fits the small card width
+                  without overflow. */}
               <AddToCartButton
                 product={product}
-                variant="icon"
-                label="הוספה לעגלה"
+                variant="compact"
+                label="הוספה לסל"
                 className="md:hidden"
               />
               {/* Desktop: full bar on hover, looks lighter than a

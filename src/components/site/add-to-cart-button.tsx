@@ -22,10 +22,11 @@ type Props = {
    * - `primary`: full-width bar — product detail page.
    * - `overlay`: bottom-of-image bar revealed on hover — desktop card
    *   listings. Useless on mobile (no hover).
-   * - `icon`: small circular bag button in the corner — always
-   *   visible, optimized for mobile card listings.
+   * - `compact`: small text pill with bag icon, anchored to the
+   *   bottom-right corner of the card image. Always visible —
+   *   designed for mobile card listings where hover isn't available.
    */
-  variant?: "primary" | "overlay" | "icon";
+  variant?: "primary" | "overlay" | "compact";
   requireSize?: boolean;
   className?: string;
   label?: string;
@@ -89,7 +90,7 @@ export function AddToCartButton({
     );
   }
 
-  if (variant === "icon") {
+  if (variant === "compact") {
     return (
       <button
         ref={selfRef}
@@ -98,14 +99,16 @@ export function AddToCartButton({
         disabled={busy}
         aria-label={label}
         className={cn(
-          // 44px hit target = Apple HIG minimum. bottom-right matches
-          // the natural "primary action" spot in RTL Hebrew reading
-          // (wishlist at top-left is the secondary save action).
-          "absolute bottom-3 right-3 w-11 h-11 inline-flex items-center justify-center bg-brand-primary text-white rounded-full shadow-md active:scale-90 transition-transform z-10",
+          // Pill anchored at bottom-right (RTL primary-action spot).
+          // min-h-11 = 44px to satisfy Apple HIG touch target while
+          // letting the text dictate the natural width. active:scale
+          // gives tactile feedback on tap since there's no hover.
+          "absolute bottom-3 right-3 inline-flex items-center justify-center gap-1.5 px-4 min-h-11 bg-brand-primary text-white rounded-full shadow-lg active:scale-95 transition-transform z-10 text-sm font-medium",
           className,
         )}
       >
-        <ShoppingBag className="w-[18px] h-[18px] stroke-[1.75]" />
+        <ShoppingBag className="w-4 h-4 stroke-[1.75]" />
+        {label}
       </button>
     );
   }
