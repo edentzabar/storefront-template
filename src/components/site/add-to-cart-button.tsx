@@ -64,21 +64,10 @@ export function AddToCartButton({
     // effect ("I see it arriving AND I see the counter go up").
     add(product, qty, size);
     toast.success(`${product.name} נוסף לעגלה`);
-    // Skip the fly on the mobile detail page: the source image is
-    // huge, the user has scrolled past it, and even with the button
-    // fallback the animation feels off in that specific layout. On
-    // every other surface (card listings, desktop detail) the fly
-    // still runs and feels great.
-    const skipFly =
-      variant === "primary" &&
-      typeof window !== "undefined" &&
-      window.innerWidth < 768;
-    if (!skipFly) {
-      // Wait for the fly to land before opening the drawer. Without
-      // this, mobile users never see the animation — the drawer
-      // slides over it within the first frame.
-      await flyToCart(flySource?.current ?? selfRef.current);
-    }
+    // Wait for the fly to land before opening the drawer. Without
+    // this, mobile users never see the animation — the drawer slides
+    // over it within the first frame.
+    await flyToCart(flySource?.current ?? selfRef.current);
     if (openCart) setOpen(true);
     setBusy(false);
   }
