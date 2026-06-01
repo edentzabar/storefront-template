@@ -7,6 +7,7 @@ import type { ProductFormState } from "@/lib/admin/products-actions";
 import { cn } from "@/lib/utils";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { MultiImageField } from "@/components/admin/multi-image-field";
+import { AiDescriptionTextarea } from "@/components/admin/ai-description-textarea";
 
 type ProductWithCategory = Prisma.ProductGetPayload<{ include: { category: true } }>;
 
@@ -207,12 +208,13 @@ export function ProductForm({ categories, product, action, submitLabel = "שמו
           help='שורה אחת מתחת לשם המוצר — למשל: חומר, גודל או מאפיין בולט'
           error={state.fieldErrors?.meta}
         />
-        <TextareaField
+        <AiDescriptionTextarea
           label="תיאור מלא"
           name="description"
+          productId={product?.id}
           defaultValue={product?.description ?? ""}
           rows={5}
-          help="מופיע בעמוד המוצר מתחת למחיר"
+          help="מופיע בעמוד המוצר מתחת למחיר. הכפתור ✨ קורא את התמונה ויוצר תיאור אוטומטית."
           error={state.fieldErrors?.description}
         />
         <TextareaField

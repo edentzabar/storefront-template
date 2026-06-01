@@ -19,22 +19,32 @@ const NUMERIC_KEYS = new Set<SettingKey>([
   "shop.maxInstallments",
   "shop.returnDays",
 ]);
+const BOOLEAN_KEYS = new Set<SettingKey>([
+  "ai.enabled",
+  "chatbot.enabled",
+]);
 
 /** Update many settings at once. Each value is coerced to the right type by key. */
 export async function updateSiteSettings(input: Record<string, string>) {
   await assertAdmin();
-  const updates: { key: SettingKey; value: string | number }[] = [];
+  const updates: { key: SettingKey; value: string | number | boolean }[] = [];
   for (const key of SETTING_KEYS) {
     const raw = input[key];
     if (raw === undefined) continue;
-    if (NUMERIC_KEYS.has(key)) {
+    if (BOOLEAN_KEYS.has(key)) {
+      // Checkbox forms submit "on"/"true"/"1" for true and don't include
+      // the field at all for false — but here we treat any non-empty
+      // truthy string as true. Callers should always include the key.
+      updates.push({ key, value: raw === "true" || raw === "on" || raw === "1" });
+    } else if (NUMERIC_KEYS.has(key)) {
       const num = Number(raw);
       if (!Number.isFinite(num) || num < 0) {
         return { ok: false, error: `${key}: ערך מספרי לא חוקי` };
       }
       updates.push({ key, value: num });
     } else {
-      const trimmed = z.string().max(2000).safeParse(raw);
+      // Allow long system prompts — bump cap from 2k to 8k.
+      const trimmed = z.string().max(8000).safeParse(raw);
       if (!trimmed.success) return { ok: false, error: `${key}: ערך לא חוקי` };
       updates.push({ key, value: trimmed.data });
     }

@@ -41,6 +41,31 @@ export type EditableSettings = {
     ctaHref: string;
   };
   announcement: string;
+  /**
+   * AI provider configuration. Drives every AI-powered feature on the
+   * site (description generator, chatbot, future modules). Empty
+   * provider / empty apiKey = AI features show as "disabled" in admin
+   * and return stubs to the storefront — no errors, no leaked details.
+   */
+  ai: {
+    enabled: boolean;
+    /** Empty string = pick up from env vars (ANTHROPIC_API_KEY / OPENAI_API_KEY). */
+    provider: "" | "anthropic" | "openai" | "google";
+    /** Stored plain in DB — only the admin can read site_setting. For
+     *  prod, prefer setting via env vars and leaving this empty. */
+    apiKey: string;
+    /** e.g. "claude-sonnet-4.5", "gpt-5", "gemini-2.5-pro". Empty
+     *  string = each provider's recommended default. */
+    model: string;
+  };
+  chatbot: {
+    enabled: boolean;
+    welcomeMessage: string;
+    /** Appended to the system prompt — tone, store policies,
+     *  domain-specific guidance. */
+    systemPromptExtra: string;
+    position: "bottom-right" | "bottom-left";
+  };
 };
 
 export const SETTING_KEYS = [
@@ -66,6 +91,14 @@ export const SETTING_KEYS = [
   "hero.ctaText",
   "hero.ctaHref",
   "announcement",
+  "ai.enabled",
+  "ai.provider",
+  "ai.apiKey",
+  "ai.model",
+  "chatbot.enabled",
+  "chatbot.welcomeMessage",
+  "chatbot.systemPromptExtra",
+  "chatbot.position",
 ] as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[number];
@@ -98,6 +131,18 @@ function defaults(): EditableSettings {
       ctaHref: defaultHero.ctaHref,
     },
     announcement: defaultAnnouncement,
+    ai: {
+      enabled: false,
+      provider: "",
+      apiKey: "",
+      model: "",
+    },
+    chatbot: {
+      enabled: false,
+      welcomeMessage: `שלום! איך אפשר לעזור? אני יודע על הקטלוג, המבצעים, המשלוחים והמדיניות של החנות.`,
+      systemPromptExtra: "",
+      position: "bottom-right",
+    },
   };
 }
 
