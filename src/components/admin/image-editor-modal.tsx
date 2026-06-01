@@ -171,16 +171,45 @@ export function ImageEditorModal({
     if (!imgSrc) return;
     setBusy("bg");
     const t = toast.loading(
-      "מסיר רקע… (פעם ראשונה לוקח דקה — המודל נטען לדפדפן וייקלע מהקאש בפעם הבאה)",
+      "מסיר רקע… (פעם ראשונה לוקח דקה — המודל נטען לדפדפן ויישמר בקאש להמשך)",
     );
     try {
-      // Dynamic import so the ~5MB library + ONNX runtime only loads
-      // when the user actually clicks the button.
-      const { removeBackground } = await import("@imgly/background-removal");
-      const blob = await removeBackground(imgSrc, {
-        output: { format: "image/png", quality: 1 },
-      });
-      const dataUrl = await blobToDataUrl(blob);
+      // Fully permissive stack:
+      //   • @huggingface/transformers (Apache 2.0)
+      //   • Xenova/modnet model (Apache 2.0 — original MODNet repo)
+      // Suitable for closed-source / commercial templates with zero
+      // licensing risk.
+      //
+      // Dynamic import so the ~5MB runtime + ~30MB WASM only load on
+      // the first click. The model weights (~25MB quantized) are
+      // fetched from HF's CDN and then cached by the browser.
+      const transformers = await import("@huggingface/transformers");
+      const segmenter = await transformers.pipeline(
+        "image-segmentation",
+        "Xenova/modnet",
+      );
+      // segmenter returns an array of { label, score, mask }. For
+      // single-class models like MODNet there's just one entry whose
+      // mask is a grayscale RawImage (foreground = lighter).
+      const seg = await segmenter(imgSrc);
+      const first = Array.isArray(seg) ? seg[0] : seg;
+      if (!first?.mask) throw new Error("המודל לא החזיר מסכה");
+      const maskCanvas = first.mask.toCanvas();
+
+      // Load the original at full resolution and composite via
+      // 'destination-in' so the mask becomes the alpha channel.
+      const original = await loadImage(imgSrc);
+      const canvas = document.createElement("canvas");
+      canvas.width = original.naturalWidth;
+      canvas.height = original.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("canvas context unavailable");
+      ctx.drawImage(original, 0, 0);
+      ctx.globalCompositeOperation = "destination-in";
+      ctx.drawImage(maskCanvas, 0, 0, original.naturalWidth, original.naturalHeight);
+      ctx.globalCompositeOperation = "source-over";
+
+      const dataUrl = canvas.toDataURL("image/png");
       setImgSrc(dataUrl);
       setBgRemoved(true);
       setBgFill("transparent");
@@ -194,6 +223,17 @@ export function ImageEditorModal({
     } finally {
       setBusy(null);
     }
+  }
+
+  // tiny helper — load an arbitrary URL or data URI as <img>
+  function loadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("טעינת תמונה נכשלה"));
+      img.src = src;
+    });
   }
 
   async function handleSave() {
