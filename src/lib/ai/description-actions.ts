@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/session";
-import { getProvider, type ChatMessage, type ImageInput } from "./provider";
+import { getProvider, type ChatMessage, type ImageInput, type ProviderFailureReason } from "./provider";
 
 /**
  * Generate a product description from its image + name + category.

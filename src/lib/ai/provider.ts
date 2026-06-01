@@ -35,11 +35,16 @@ export type AIProvider = {
   ): Promise<string>;
 };
 
-type Resolved = {
-  provider: AIProvider | null;
-  /** Helps the UI explain WHY AI is off ("no key" vs "disabled by admin"). */
-  reason: "disabled" | "no-key" | "no-provider" | "ok";
-};
+/**
+ * Discriminated union: when `provider` is not null, `reason` is the
+ * sentinel "ok". When provider is null, reason carries the failure
+ * code so the UI can show a friendly explanation.
+ */
+type Resolved =
+  | { provider: AIProvider; reason: "ok" }
+  | { provider: null; reason: "disabled" | "no-key" | "no-provider" };
+
+export type ProviderFailureReason = "disabled" | "no-key" | "no-provider";
 
 /**
  * Walks the resolution chain:
