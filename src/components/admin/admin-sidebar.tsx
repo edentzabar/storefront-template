@@ -58,6 +58,7 @@ export function AdminSidebar({
     { href: "/admin/coupons", label: "קופונים", icon: Ticket },
     { href: "/admin/popups", label: "פופאפים", icon: MessageSquare },
     { href: "/admin/reports", label: "דוחות", icon: BarChart3 },
+    { href: "/admin/ai", label: "AI", icon: Sparkles },
     { href: "/admin/settings", label: "הגדרות", icon: Settings },
   ];
 
