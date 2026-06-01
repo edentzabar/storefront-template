@@ -2,14 +2,23 @@
 
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Upload, X, Loader2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { uploadImage } from "@/lib/admin/upload-actions";
+import { ImageEditorModal } from "./image-editor-modal";
 
 /**
- * Upload-or-paste image field. Accepts an external URL via the inline text
- * input, OR uploads a file to Vercel Blob and stores the returned URL.
+ * Upload-or-paste image field with an in-browser editor.
+ *
+ * Flow when picking a file:
+ *   1. user selects file → opens the ImageEditorModal
+ *   2. user crops / rotates / removes background / tweaks colors
+ *   3. on save the edited Blob is uploaded to Vercel Blob
+ *   4. returned URL is stored in the form
+ *
+ * They can also re-open the editor on the already-uploaded image
+ * by clicking "ערוך" — handy when the first crop was wrong.
  */
 export function ImageUploadField({
   label,
@@ -35,8 +44,24 @@ export function ImageUploadField({
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [text, setText] = useState(value);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorSource, setEditorSource] = useState<File | string | null>(null);
 
-  function handleFile(file: File) {
+  function openEditorWithFile(file: File) {
+    setEditorSource(file);
+    setEditorOpen(true);
+  }
+
+  function openEditorWithExisting() {
+    if (!text) return;
+    setEditorSource(text);
+    setEditorOpen(true);
+  }
+
+  function uploadBlob(blob: Blob) {
+    const fileName =
+      blob.type === "image/png" ? "edited.png" : "edited.jpg";
+    const file = new File([blob], fileName, { type: blob.type });
     const formData = new FormData();
     formData.append("file", file);
     formData.append("purpose", purpose);
@@ -51,6 +76,9 @@ export function ImageUploadField({
       }
     });
   }
+
+  const initialAspect =
+    aspect === "square" ? "1:1" : aspect === "tall" ? "3:4" : "16:9";
 
   const aspectClass =
     aspect === "square" ? "aspect-square" : aspect === "tall" ? "aspect-[3/4]" : "aspect-video";
@@ -92,7 +120,7 @@ export function ImageUploadField({
             className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background font-mono"
             dir="ltr"
           />
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               type="button"
               variant="outline"
@@ -106,8 +134,21 @@ export function ImageUploadField({
               ) : (
                 <Upload className="size-3.5" />
               )}
-              {pending ? "מעלה..." : "העלאה"}
+              {pending ? "מעלה..." : "העלאה ועריכה"}
             </Button>
+            {text && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={openEditorWithExisting}
+                disabled={pending}
+                className="gap-1.5"
+              >
+                <Wand2 className="size-3.5" />
+                ערוך
+              </Button>
+            )}
             {text && (
               <Button
                 type="button"
@@ -136,12 +177,22 @@ export function ImageUploadField({
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) handleFile(file);
+              if (file) openEditorWithFile(file);
               e.target.value = "";
             }}
           />
         </div>
       </div>
+
+      {/* Editor modal — opens after file pick OR when clicking "ערוך" */}
+      <ImageEditorModal
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        source={editorSource}
+        onSave={uploadBlob}
+        defaultAspect={initialAspect}
+      />
+
       {name && (
         <input
           type="hidden"

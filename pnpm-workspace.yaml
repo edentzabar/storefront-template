@@ -6,3 +6,4 @@ allowBuilds:
   '@prisma/engines': true
   prisma: true
   '@prisma/client': true
+  protobufjs: set this to true or false
