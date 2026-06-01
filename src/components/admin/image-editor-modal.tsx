@@ -225,8 +225,12 @@ export function ImageEditorModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[1100px] w-[95vw] max-h-[95vh] p-0 overflow-hidden flex flex-col">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+      {/* Near-fullscreen so the canvas actually has room to breathe.
+          !max-w-none overrides the shadcn Dialog default cap, then we
+          set our own width/height as 96% of the viewport. p-0 strips
+          the dialog's internal padding so the canvas reaches the edges. */}
+      <DialogContent className="!max-w-none w-[96vw] h-[94vh] sm:w-[94vw] sm:h-[92vh] p-0 overflow-hidden flex flex-col gap-0">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between shrink-0">
           <div>
             <DialogTitle className="text-lg font-semibold">עריכת תמונה</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
@@ -244,12 +248,15 @@ export function ImageEditorModal({
           </Button>
         </div>
 
-        <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-[1fr_280px] min-h-0">
-          {/* Canvas / preview */}
-          <div className="relative bg-[repeating-conic-gradient(#e5e5e5_0%_25%,#f5f5f5_0%_50%)] [background-size:20px_20px] overflow-auto p-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-[1fr_320px] min-h-0">
+          {/* Canvas / preview — fills all remaining vertical space; the
+              image inside is constrained to max-w-full max-h-full so
+              ReactCrop sizes its overlay to the displayed dimensions.
+              Checkered bg makes transparency visible after bg removal. */}
+          <div className="relative bg-[repeating-conic-gradient(#e5e5e5_0%_25%,#f5f5f5_0%_50%)] [background-size:24px_24px] overflow-auto p-4 sm:p-6 lg:p-8 flex items-center justify-center min-h-0">
             {imgSrc ? (
               <div
-                className="relative inline-block"
+                className="relative inline-block max-w-full max-h-full"
                 style={{
                   // Background fill for after bg-removal preview
                   background:
@@ -264,6 +271,7 @@ export function ImageEditorModal({
                   keepSelection
                   minHeight={40}
                   minWidth={40}
+                  className="!max-h-full"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -278,8 +286,15 @@ export function ImageEditorModal({
                     style={{
                       transform: `rotate(${rotation}deg)`,
                       filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`,
-                      maxHeight: "70vh",
+                      // Fill the canvas area without forcing scroll —
+                      // the image scales down to fit both the modal's
+                      // available width AND height. The 14rem accounts
+                      // for the topbar (≈80px), footer (≈80px) and
+                      // some breathing room.
+                      maxWidth: "100%",
+                      maxHeight: "calc(94vh - 14rem)",
                       display: "block",
+                      objectFit: "contain",
                     }}
                   />
                 </ReactCrop>
@@ -444,8 +459,9 @@ export function ImageEditorModal({
           </aside>
         </div>
 
-        {/* Footer actions */}
-        <div className="px-6 py-4 border-t border-border bg-muted/30 flex justify-end gap-2">
+        {/* Footer actions — fixed at modal bottom so it's always
+            reachable regardless of canvas size. */}
+        <div className="px-6 py-4 border-t border-border bg-muted/30 flex justify-end gap-2 shrink-0">
           <Button
             type="button"
             variant="outline"
