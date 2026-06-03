@@ -92,30 +92,7 @@ export function ProductForm({
         </div>
       )}
 
-      {/* ─── 1. IMAGES (moved to top — AI description needs the image) ─── */}
-      <Section title="תמונות">
-        <ImageUploadField
-          label="תמונה ראשית"
-          value={mainImage}
-          onChange={setMainImage}
-          name="image"
-          required
-          purpose={`product-${product?.id ?? "new"}`}
-          aspect="square"
-          autoOpenEditor={settings.editorAutoOpen}
-          help="העלאה ממכשיר או הדבקת URL. JPG/PNG/WebP — עד 8MB."
-        />
-        <MultiImageField
-          label="תמונות נוספות לגלריה"
-          value={images}
-          onChange={setImages}
-          name="imagesText"
-          purpose={`product-${product?.id ?? "new"}-gallery`}
-          help="בחירה מרובה. גרור לסידור מחדש. הראשונה תוצג בכרטיס המוצר."
-        />
-      </Section>
-
-      {/* ─── 2. IDENTITY ─── */}
+      {/* ─── 1. IDENTITY ─── */}
       <Section title="פרטי המוצר">
         <ControlledField
           label="שם המוצר"
@@ -150,7 +127,31 @@ export function ProductForm({
         <input type="hidden" name="categoryId" value={effectiveCategoryId} />
       </Section>
 
-      {/* ─── 3. TEXTS — description needs image first, hence #1 ─── */}
+      {/* ─── 2. IMAGES (between identity + texts — AI description
+              reads the image so it must exist before "צור עם AI") ─── */}
+      <Section title="תמונות">
+        <ImageUploadField
+          label="תמונה ראשית"
+          value={mainImage}
+          onChange={setMainImage}
+          name="image"
+          required
+          purpose={`product-${product?.id ?? "new"}`}
+          aspect="square"
+          autoOpenEditor={settings.editorAutoOpen}
+          help="העלאה ממכשיר או הדבקת URL. JPG/PNG/WebP — עד 8MB."
+        />
+        <MultiImageField
+          label="תמונות נוספות לגלריה"
+          value={images}
+          onChange={setImages}
+          name="imagesText"
+          purpose={`product-${product?.id ?? "new"}-gallery`}
+          help="בחירה מרובה. גרור לסידור מחדש. הראשונה תוצג בכרטיס המוצר."
+        />
+      </Section>
+
+      {/* ─── 3. TEXTS — needs an image saved first so AI description works ─── */}
       <Section title="טקסטים">
         <ControlledField
           label="תיאור קצר"
