@@ -22,6 +22,8 @@ const NUMERIC_KEYS = new Set<SettingKey>([
 const BOOLEAN_KEYS = new Set<SettingKey>([
   "ai.enabled",
   "chatbot.enabled",
+  "products.skuEnabled",
+  "images.editorAutoOpen",
 ]);
 
 /** Update many settings at once. Each value is coerced to the right type by key. */

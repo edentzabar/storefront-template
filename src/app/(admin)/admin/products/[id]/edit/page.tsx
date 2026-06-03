@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSiteSettings } from "@/lib/site-settings";
 import { AdminPageHeader } from "../../../_components/admin-page-header";
 import { ProductForm, type CategoryTreeForPicker } from "../../_components/product-form";
 import { updateProduct } from "@/lib/admin/products-actions";
@@ -30,12 +31,13 @@ async function loadCategoryTree(): Promise<CategoryTreeForPicker> {
 
 export default async function EditProductPage({ params }: Params) {
   const { id } = await params;
-  const [product, categories] = await Promise.all([
+  const [product, categories, settings] = await Promise.all([
     prisma.product.findUnique({
       where: { id },
       include: { category: true },
     }),
     loadCategoryTree(),
+    getSiteSettings(),
   ]);
 
   if (!product) notFound();
@@ -46,13 +48,17 @@ export default async function EditProductPage({ params }: Params) {
     <div className="p-8">
       <AdminPageHeader
         title={`עריכת: ${product.name}`}
-        subtitle={`SKU: ${product.sku}`}
+        subtitle={product.sku ? `מק"ט: ${product.sku}` : undefined}
       />
       <ProductForm
         categories={categories}
         product={product}
         action={boundAction}
         submitLabel="שמור שינויים"
+        settings={{
+          skuEnabled: settings.products.skuEnabled,
+          editorAutoOpen: settings.images.editorAutoOpen,
+        }}
       />
     </div>
   );

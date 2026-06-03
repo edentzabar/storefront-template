@@ -36,6 +36,8 @@ export function SettingsForm({ initial }: { initial: EditableSettings }) {
     "hero.ctaHref": initial.hero.ctaHref,
     announcement: initial.announcement,
     // NOTE: AI + chatbot moved to /admin/ai — see ai-settings-form.
+    "products.skuEnabled": initial.products.skuEnabled ? "true" : "false",
+    "images.editorAutoOpen": initial.images.editorAutoOpen ? "true" : "false",
   });
   const [pending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -227,6 +229,30 @@ export function SettingsForm({ initial }: { initial: EditableSettings }) {
         />
       </Section>
 
+      <Section
+        title="מוצרים"
+        description="התנהגות טופס המוצר באדמין"
+      >
+        <ToggleField
+          label="עבודה עם מק״ט"
+          value={values["products.skuEnabled"]}
+          onChange={set("products.skuEnabled")}
+          help="כשמופעל, יופיע סקשן מק״ט בטופס המוצר. לכל מוצר תוכל לסמן אם הוא דורש מק״ט (לא חייב)."
+        />
+      </Section>
+
+      <Section
+        title="תמונות"
+        description="אופן ההעלאה והעריכה של תמונות"
+      >
+        <ToggleField
+          label="פתח את עורך התמונה אוטומטית אחרי העלאה"
+          value={values["images.editorAutoOpen"]}
+          onChange={set("images.editorAutoOpen")}
+          help="כשמופעל — מיד אחרי בחירת קובץ ייפתח האדיטור (חיתוך / הסרת רקע AI / וכו'). כשכבוי — הקובץ עולה ישר, ויש כפתור 'ערוך' לעריכה לפי דרישה."
+        />
+      </Section>
+
       <div className="sticky bottom-0 -mx-4 md:-mx-8 mt-6 px-4 md:px-8 py-3 bg-background/95 backdrop-blur border-t border-border flex items-center justify-end gap-3">
         {justSaved && (
           <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
@@ -244,6 +270,34 @@ export function SettingsForm({ initial }: { initial: EditableSettings }) {
         </Button>
       </div>
     </form>
+  );
+}
+
+function ToggleField({
+  label,
+  value,
+  onChange,
+  help,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  help?: string;
+}) {
+  const checked = value === "true";
+  return (
+    <div className="flex items-start gap-3">
+      <label className="flex items-center gap-2.5 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked ? "true" : "false")}
+          className="size-4 accent-foreground cursor-pointer"
+        />
+        <span className="text-sm">{label}</span>
+      </label>
+      {help && <p className="text-[11px] text-muted-foreground self-center">{help}</p>}
+    </div>
   );
 }
 

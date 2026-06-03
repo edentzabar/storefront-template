@@ -17,7 +17,9 @@ const productSchema = z.object({
   originalPrice: z.coerce.number().int().min(0).nullable().optional(),
   badge: z.string().nullable().optional(),
   badgeType: z.string().nullable().optional(),
-  sku: z.string().min(1, "מק״ט חובה"),
+  // Optional — gated by the global products.skuEnabled setting +
+  // a per-product toggle. Empty string is the canonical "no SKU".
+  sku: z.string().default(""),
   stock: z.coerce.number().int().min(0).default(0),
   image: z.string().min(1, "תמונה ראשית חובה"),
   imagesText: z.string().default(""), // newline-separated paths

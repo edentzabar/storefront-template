@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { getSiteSettings } from "@/lib/site-settings";
 import { AdminPageHeader } from "../../_components/admin-page-header";
 import { ProductForm, type CategoryTreeForPicker } from "../_components/product-form";
 import { createProduct } from "@/lib/admin/products-actions";
@@ -27,12 +28,23 @@ async function loadCategoryTree(): Promise<CategoryTreeForPicker> {
 }
 
 export default async function NewProductPage() {
-  const categories = await loadCategoryTree();
+  const [categories, settings] = await Promise.all([
+    loadCategoryTree(),
+    getSiteSettings(),
+  ]);
 
   return (
     <div className="p-8">
       <AdminPageHeader title="מוצר חדש" subtitle="הוספת מוצר לקולקציה" />
-      <ProductForm categories={categories} action={createProduct} submitLabel="צור מוצר" />
+      <ProductForm
+        categories={categories}
+        action={createProduct}
+        submitLabel="צור מוצר"
+        settings={{
+          skuEnabled: settings.products.skuEnabled,
+          editorAutoOpen: settings.images.editorAutoOpen,
+        }}
+      />
     </div>
   );
 }

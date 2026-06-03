@@ -66,6 +66,20 @@ export type EditableSettings = {
     systemPromptExtra: string;
     position: "bottom-right" | "bottom-left";
   };
+  /** Per-store product form behaviour. */
+  products: {
+    /** Show the SKU field on the product form. Some merchants work
+     *  with SKUs, others don't — defaults to off so new merchants
+     *  aren't asked for a code they don't have. */
+    skuEnabled: boolean;
+  };
+  /** Image upload / editor behaviour shared by every upload field. */
+  images: {
+    /** When true, the in-browser editor opens automatically after
+     *  the user picks a file. When false, the file uploads directly
+     *  and the merchant can click "ערוך" if they want to edit it. */
+    editorAutoOpen: boolean;
+  };
 };
 
 export const SETTING_KEYS = [
@@ -99,6 +113,8 @@ export const SETTING_KEYS = [
   "chatbot.welcomeMessage",
   "chatbot.systemPromptExtra",
   "chatbot.position",
+  "products.skuEnabled",
+  "images.editorAutoOpen",
 ] as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[number];
@@ -142,6 +158,12 @@ function defaults(): EditableSettings {
       welcomeMessage: `שלום! איך אפשר לעזור? אני יודע על הקטלוג, המבצעים, המשלוחים והמדיניות של החנות.`,
       systemPromptExtra: "",
       position: "bottom-right",
+    },
+    products: {
+      skuEnabled: false,
+    },
+    images: {
+      editorAutoOpen: false,
     },
   };
 }

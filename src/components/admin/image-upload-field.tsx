@@ -29,6 +29,7 @@ export function ImageUploadField({
   aspect = "wide",
   name,
   required = false,
+  autoOpenEditor = false,
 }: {
   label: string;
   value: string;
@@ -40,6 +41,10 @@ export function ImageUploadField({
   /** Optional hidden input name — for native form submission */
   name?: string;
   required?: boolean;
+  /** When true, the editor opens automatically after a file pick.
+   *  Otherwise the file uploads directly and the merchant can click
+   *  the "ערוך" button if they want to crop/remove background/etc. */
+  autoOpenEditor?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
@@ -50,6 +55,22 @@ export function ImageUploadField({
   function openEditorWithFile(file: File) {
     setEditorSource(file);
     setEditorOpen(true);
+  }
+
+  function uploadFileDirectly(file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("purpose", purpose);
+    startTransition(async () => {
+      const result = await uploadImage(formData);
+      if (result.ok && result.url) {
+        setText(result.url);
+        onChange(result.url);
+        toast.success("התמונה הועלתה");
+      } else {
+        toast.error(result.error ?? "שגיאה בהעלאה");
+      }
+    });
   }
 
   function openEditorWithExisting() {
@@ -134,7 +155,7 @@ export function ImageUploadField({
               ) : (
                 <Upload className="size-3.5" />
               )}
-              {pending ? "מעלה..." : "העלאה ועריכה"}
+              {pending ? "מעלה..." : autoOpenEditor ? "העלאה ועריכה" : "העלאה"}
             </Button>
             {text && (
               <Button
@@ -177,7 +198,13 @@ export function ImageUploadField({
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) openEditorWithFile(file);
+              if (file) {
+                // Branch on the merchant's preference: editor-first
+                // vs upload-now-edit-later. Both flows allow opening
+                // the editor on demand via the "ערוך" button.
+                if (autoOpenEditor) openEditorWithFile(file);
+                else uploadFileDirectly(file);
+              }
               e.target.value = "";
             }}
           />
