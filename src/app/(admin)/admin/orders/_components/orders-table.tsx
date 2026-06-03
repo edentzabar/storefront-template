@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -225,22 +226,25 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
                 return (
                   <tr
                     key={o.id}
+                    onClick={() => router.push(`/admin/orders/${o.id}`)}
                     className={cn(
-                      "group transition-colors",
+                      "group transition-colors cursor-pointer",
                       isSel ? "bg-brand-bg-soft/60 dark:bg-muted/40" : "hover:bg-muted/30",
                     )}
                   >
-                    <td className="px-4 py-3 align-middle">
+                    {/* Checkbox + dropdown cells stop propagation so
+                        clicking them doesn't also navigate to the order. */}
+                    <td
+                      className="px-4 py-3 align-middle"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Checkbox
                         checked={isSel}
                         onCheckedChange={() => toggleOne(o.id)}
                         aria-label={`בחר הזמנה ${String(o.id)}`}
                       />
                     </td>
-                    <td
-                      className="px-4 py-3 align-middle cursor-pointer"
-                      onClick={() => router.push(`/admin/orders/${o.id}`)}
-                    >
+                    <td className="px-4 py-3 align-middle">
                       <div className="font-medium text-sm">{o.customerFullName}</div>
                       <div className="text-[11px] text-muted-foreground truncate max-w-[200px]">
                         {o.customerEmail}
@@ -271,7 +275,10 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
                         ₪{o.total.toLocaleString("he-IL")}
                       </span>
                     </td>
-                    <td className="px-2 py-3 align-middle">
+                    <td
+                      className="px-2 py-3 align-middle"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           render={
@@ -286,22 +293,28 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
                           <MoreHorizontal className="size-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>שנה סטטוס</DropdownMenuLabel>
-                          {STATUSES.map((s) => (
-                            <DropdownMenuItem
-                              key={s}
-                              disabled={s === o.status}
-                              onClick={() =>
-                                startTransition(async () => {
-                                  const r = await bulkUpdateOrderStatus([o.id], s);
-                                  if (r.ok) toast.success(`עודכן ל-${STATUS_LABELS[s]}`);
-                                  else toast.error(r.error ?? "שגיאה");
-                                })
-                              }
-                            >
-                              {STATUS_LABELS[s]}
-                            </DropdownMenuItem>
-                          ))}
+                          {/* DropdownMenuLabel is a Base UI GroupLabel
+                              which MUST be inside a Group — otherwise
+                              Base UI throws at render time and Next.js
+                              shows the global error page. */}
+                          <DropdownMenuGroup>
+                            <DropdownMenuLabel>שנה סטטוס</DropdownMenuLabel>
+                            {STATUSES.map((s) => (
+                              <DropdownMenuItem
+                                key={s}
+                                disabled={s === o.status}
+                                onClick={() =>
+                                  startTransition(async () => {
+                                    const r = await bulkUpdateOrderStatus([o.id], s);
+                                    if (r.ok) toast.success(`עודכן ל-${STATUS_LABELS[s]}`);
+                                    else toast.error(r.error ?? "שגיאה");
+                                  })
+                                }
+                              >
+                                {STATUS_LABELS[s]}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuGroup>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => router.push(`/admin/orders/${o.id}`)}
