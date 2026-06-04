@@ -301,7 +301,7 @@ export function ProductForm({
             name="stock"
             type="number"
             min={0}
-            defaultValue={product?.stock?.toString() ?? "0"}
+            defaultValue={product?.stock?.toString() ?? ""}
             help="כשמגיע ל-0 המוצר מסומן כאזל"
             error={state.fieldErrors?.stock}
           />
@@ -320,7 +320,7 @@ export function ProductForm({
             label="סדר תצוגה"
             name="sortOrder"
             type="number"
-            defaultValue={product?.sortOrder?.toString() ?? "0"}
+            defaultValue={product?.sortOrder?.toString() ?? ""}
             help="קטן יותר = מופיע ראשון בתוצאות הקטגוריה ובדף הבית"
           />
           <div className="flex flex-col gap-3 pt-4">

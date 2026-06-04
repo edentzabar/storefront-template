@@ -267,7 +267,7 @@ export function CategoryForm({
             label="סדר תצוגה"
             name="sortOrder"
             type="number"
-            defaultValue={category?.sortOrder?.toString() ?? "0"}
+            defaultValue={category?.sortOrder?.toString() ?? ""}
             help="קטן יותר = מופיע ראשון"
           />
           <div className="flex items-end pb-2">
