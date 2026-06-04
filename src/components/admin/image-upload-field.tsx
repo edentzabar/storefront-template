@@ -29,7 +29,6 @@ export function ImageUploadField({
   aspect = "wide",
   name,
   required = false,
-  autoOpenEditor = false,
 }: {
   label: string;
   value: string;
@@ -41,21 +40,12 @@ export function ImageUploadField({
   /** Optional hidden input name — for native form submission */
   name?: string;
   required?: boolean;
-  /** When true, the editor opens automatically after a file pick.
-   *  Otherwise the file uploads directly and the merchant can click
-   *  the "ערוך" button if they want to crop/remove background/etc. */
-  autoOpenEditor?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [text, setText] = useState(value);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorSource, setEditorSource] = useState<File | string | null>(null);
-
-  function openEditorWithFile(file: File) {
-    setEditorSource(file);
-    setEditorOpen(true);
-  }
 
   function uploadFileDirectly(file: File) {
     const formData = new FormData();
@@ -155,7 +145,7 @@ export function ImageUploadField({
               ) : (
                 <Upload className="size-3.5" />
               )}
-              {pending ? "מעלה..." : autoOpenEditor ? "העלאה ועריכה" : "העלאה"}
+              {pending ? "מעלה..." : "העלאה"}
             </Button>
             {text && (
               <Button
@@ -198,13 +188,11 @@ export function ImageUploadField({
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) {
-                // Branch on the merchant's preference: editor-first
-                // vs upload-now-edit-later. Both flows allow opening
-                // the editor on demand via the "ערוך" button.
-                if (autoOpenEditor) openEditorWithFile(file);
-                else uploadFileDirectly(file);
-              }
+              // Always upload directly — the merchant clicks "ערוך"
+              // on the already-uploaded image when they want to crop,
+              // remove background, etc. Saves them a modal step they
+              // usually don't need.
+              if (file) uploadFileDirectly(file);
               e.target.value = "";
             }}
           />

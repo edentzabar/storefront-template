@@ -4,6 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/session";
+import { audit } from "@/lib/audit";
 import {
   SETTING_KEYS,
   SETTINGS_TAG,
@@ -23,7 +24,6 @@ const BOOLEAN_KEYS = new Set<SettingKey>([
   "ai.enabled",
   "chatbot.enabled",
   "products.skuEnabled",
-  "images.editorAutoOpen",
 ]);
 
 /** Update many settings at once. Each value is coerced to the right type by key. */
@@ -52,6 +52,14 @@ export async function updateSiteSettings(input: Record<string, string>) {
     }
   }
 
+  // Snapshot the BEFORE state for the audit log. Read only the keys
+  // we're about to write so we're not pulling unrelated settings.
+  const beforeRows = await prisma.siteSetting.findMany({
+    where: { key: { in: updates.map((u) => u.key) } },
+  });
+  const before = Object.fromEntries(beforeRows.map((r) => [r.key, r.value]));
+  const after = Object.fromEntries(updates.map((u) => [u.key, u.value]));
+
   // Atomic upsert
   await prisma.$transaction(
     updates.map((u) =>
@@ -62,6 +70,11 @@ export async function updateSiteSettings(input: Record<string, string>) {
       }),
     ),
   );
+
+  // Settings changes are high-impact (touch every page) so we log
+  // every save with the diff. NOTE: this includes the AI key if it
+  // changed — fine because audit_log is admin-only by gate.
+  await audit("settings:update", "site_setting", null, { before, after });
 
   updateTag(SETTINGS_TAG);
   revalidatePath("/", "layout");

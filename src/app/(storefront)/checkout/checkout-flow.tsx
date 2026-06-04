@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Check, X, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/stores/cart-store";
+import { useShopSettings } from "@/components/site/shop-settings-provider";
 import { placeOrder, validateCouponForCart } from "@/lib/orders-actions";
 import { saveAbandonedCart } from "@/lib/abandoned-cart-actions";
 import { formatPrice } from "@/lib/format";
@@ -29,6 +30,7 @@ export function CheckoutFlow() {
   const items = useCart((s) => s.items);
   const total = useCart((s) => s.total());
   const clearCart = useCart((s) => s.clear);
+  const { freeShippingMin } = useShopSettings();
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<Step>("details");
   const [submitting, setSubmitting] = useState(false);
@@ -61,7 +63,7 @@ export function CheckoutFlow() {
       ? 35
       : shipping.method === "pickup"
       ? 0
-      : total >= siteConfig.shop.freeShippingMin
+      : total >= freeShippingMin
       ? 0
       : 30;
   const discountAmount = appliedCoupon?.discount ?? 0;
@@ -143,7 +145,13 @@ export function CheckoutFlow() {
       return;
     }
     clearCart();
-    router.push(`/checkout/confirmation/${result.orderId}`);
+    // Pass the per-order access token in the URL so guest customers
+    // (no account) can still view their own confirmation. The token
+    // is unguessable (192 bits of entropy) so the URL is safe to
+    // share with the customer in the email but exposes nothing else.
+    router.push(
+      `/checkout/confirmation/${result.orderId}?t=${encodeURIComponent(result.accessToken)}`,
+    );
   }
 
   return (
@@ -200,7 +208,7 @@ export function CheckoutFlow() {
             </h2>
             <div className="space-y-3">
               {[
-                { method: "standard" as const, label: "משלוח רגיל (2-4 ימי עסקים)", price: total >= siteConfig.shop.freeShippingMin ? "חינם" : "₪30" },
+                { method: "standard" as const, label: "משלוח רגיל (2-4 ימי עסקים)", price: total >= freeShippingMin ? "חינם" : "₪30" },
                 { method: "express" as const, label: "אקספרס 24 שעות", price: "₪35" },
                 { method: "pickup" as const, label: "איסוף עצמי מהסטודיו (תל אביב)", price: "חינם" },
               ].map((opt) => (
@@ -362,6 +370,7 @@ export function CheckoutFlow() {
         shippingCost={shippingCost}
         appliedCoupon={appliedCoupon}
         onApplyCoupon={setAppliedCoupon}
+        mounted={mounted}
       />
       </div>
     </>
@@ -373,8 +382,8 @@ export function CheckoutFlow() {
 function TestModeBanner() {
   return (
     <div className="bg-brand-accent/10 border border-brand-accent/30 px-4 py-3 mb-6 text-[0.85rem] text-brand-accent-dark text-center">
-      <strong className="font-medium">🧪 מצב טסט</strong>
-      {" — "}
+      <strong className="font-medium">🧪 מצב טסט.</strong>
+      {" "}
       תשלומים מדומים. אף כסף אמיתי לא יחויב. ראה{" "}
       <a href="#test-cards" className="underline">כרטיסי הטסט</a> למטה.
     </div>
@@ -483,35 +492,43 @@ function OrderSummary({
   shippingCost,
   appliedCoupon,
   onApplyCoupon,
+  mounted,
 }: {
   items: ReturnType<typeof useCart.getState>["items"];
   subtotal: number;
   shippingCost: number;
   appliedCoupon: { code: string; discount: number } | null;
   onApplyCoupon: (c: { code: string; discount: number } | null) => void;
+  mounted: boolean;
 }) {
   const discount = appliedCoupon?.discount ?? 0;
   const total = Math.max(0, subtotal - discount) + shippingCost;
+  // The cart store is persisted in localStorage, so server-rendered totals
+  // (empty cart) never match the client (hydrated cart). Gate every numeric
+  // span behind `mounted` to keep SSR markup stable and let React swap in
+  // the real values after the first client render.
+  const placeholder = <span className="inline-block w-12 h-4 bg-brand-bg-soft rounded animate-pulse align-middle" />;
   return (
     <aside className="lg:sticky lg:top-24 lg:self-start bg-brand-surface p-6 border border-brand-border">
       <h3 className="font-body text-lg font-medium mb-4 text-brand-primary">
         סיכום ההזמנה
       </h3>
       <ul className="space-y-3 max-h-80 overflow-y-auto mb-4">
-        {items.map((item) => (
-          <li key={item.key} className="flex gap-3 text-sm">
-            <div className="relative w-14 h-16 flex-shrink-0 overflow-hidden bg-brand-bg-soft">
-              <Image src={item.image} alt={item.name} fill sizes="56px" className="object-cover" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-brand-primary line-clamp-1">{item.name}</div>
-              <div className="text-brand-text-soft text-xs">
-                כמות {item.qty}{item.size ? ` · מידה ${item.size}` : ""}
+        {mounted &&
+          items.map((item) => (
+            <li key={item.key} className="flex gap-3 text-sm">
+              <div className="relative w-14 h-16 flex-shrink-0 overflow-hidden bg-brand-bg-soft">
+                <Image src={item.image} alt={item.name} fill sizes="56px" className="object-cover" />
               </div>
-            </div>
-            <div className="text-brand-primary">{formatPrice(item.price * item.qty)}</div>
-          </li>
-        ))}
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-brand-primary line-clamp-1">{item.name}</div>
+                <div className="text-brand-text-soft text-xs">
+                  כמות {item.qty}{item.size ? ` · מידה ${item.size}` : ""}
+                </div>
+              </div>
+              <div className="text-brand-primary">{formatPrice(item.price * item.qty)}</div>
+            </li>
+          ))}
       </ul>
 
       <CouponInput
@@ -523,7 +540,7 @@ function OrderSummary({
       <div className="border-t border-brand-border pt-4 space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-brand-text-soft">ביניים</span>
-          <span>{formatPrice(subtotal)}</span>
+          <span>{mounted ? formatPrice(subtotal) : placeholder}</span>
         </div>
         {appliedCoupon && (
           <div className="flex justify-between text-brand-accent-dark">
@@ -535,11 +552,13 @@ function OrderSummary({
         )}
         <div className="flex justify-between">
           <span className="text-brand-text-soft">משלוח</span>
-          <span>{shippingCost === 0 ? "חינם" : formatPrice(shippingCost)}</span>
+          <span>{mounted ? (shippingCost === 0 ? "חינם" : formatPrice(shippingCost)) : placeholder}</span>
         </div>
         <div className="flex justify-between items-baseline pt-3 mt-2 border-t border-brand-border">
           <span className="font-medium">סה&quot;כ</span>
-          <span className="font-display text-2xl text-brand-primary">{formatPrice(total)}</span>
+          <span className="font-display text-2xl text-brand-primary">
+            {mounted ? formatPrice(total) : placeholder}
+          </span>
         </div>
       </div>
     </aside>
@@ -598,35 +617,59 @@ function CouponInput({
   }
 
   if (!open) {
+    // Visible-but-discreet entry point. Big enough that customers
+    // who arrived with a code find it in seconds, but it doesn't read
+    // as "you are missing a deal" to customers without one (Baymard
+    // research shows always-open coupon fields hurt conversion).
     return (
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mb-4 inline-flex items-center gap-2 text-xs text-brand-text-soft hover:text-brand-accent transition-colors"
+        className="mb-4 w-full flex items-center justify-between gap-3 px-4 py-3 bg-brand-bg-soft/60 border border-dashed border-brand-accent/50 rounded-md text-brand-text hover:bg-brand-accent/8 hover:border-brand-accent transition-colors group"
       >
-        <Tag className="size-3.5" />
-        יש לי קוד הנחה
+        <span className="inline-flex items-center gap-2.5 text-sm font-medium">
+          <span className="inline-flex items-center justify-center size-7 rounded-md bg-brand-accent/15 text-brand-accent-dark group-hover:bg-brand-accent group-hover:text-white transition-colors">
+            <Tag className="size-3.5" />
+          </span>
+          יש לי קוד קופון
+        </span>
+        <span className="text-lg text-brand-accent-dark leading-none">+</span>
       </button>
     );
   }
 
   return (
-    <form onSubmit={apply} className="mb-4 flex gap-2">
+    <form
+      onSubmit={apply}
+      className="mb-4 flex gap-2 p-3 bg-brand-bg-soft/60 border border-brand-accent/40 rounded-md"
+    >
       <input
         autoFocus
         value={code}
         onChange={(e) => setCode(e.target.value.toUpperCase())}
-        placeholder="קוד הנחה"
-        className="flex-1 px-3 py-2 border border-brand-border bg-white text-sm font-mono uppercase focus:outline-none focus:border-brand-primary"
+        placeholder="הזיני קוד והקישי החל"
+        className="flex-1 min-w-0 px-3 py-2.5 border border-brand-border bg-white rounded-md text-sm font-mono uppercase focus:outline-none focus:border-brand-accent text-end"
         disabled={pending}
         maxLength={40}
+        dir="ltr"
       />
       <button
         type="submit"
         disabled={pending || !code.trim()}
-        className="px-4 py-2 bg-brand-primary text-white text-xs tracking-[0.15em] uppercase font-medium hover:bg-brand-primary-soft transition-colors disabled:opacity-50"
+        className="shrink-0 px-5 py-2.5 bg-brand-accent text-white text-sm font-medium rounded-md hover:bg-brand-accent-dark transition-colors disabled:opacity-50"
       >
         {pending ? "..." : "החל"}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(false);
+          setCode("");
+        }}
+        className="shrink-0 size-10 grid place-items-center rounded-md text-brand-text-soft hover:text-destructive hover:bg-white transition-colors"
+        aria-label="סגור"
+      >
+        <X className="size-4" />
       </button>
     </form>
   );

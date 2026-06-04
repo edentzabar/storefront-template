@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { siteConfig } from "@/lib/site-config";
 import { brandPalette } from "@/lib/brand";
+import { rateLimit, getClientIp, POLICIES } from "@/lib/rate-limit";
 
 /**
  * Restock waitlist — visitors signal "email me when this is back" on
@@ -39,6 +40,15 @@ export async function joinRestockWaitlist(
   }
   const { productId, email } = parsed.data;
   const normalizedEmail = email.toLowerCase().trim();
+
+  // SECURITY: Rate-limit per-IP and per-email to prevent spam signups
+  // and DB bloat. 5 per hour per IP is generous for legit users.
+  const ip = await getClientIp();
+  const ipLimit = await rateLimit(`restock:ip:${ip}`, POLICIES.spam);
+  const emailLimit = await rateLimit(`restock:e:${normalizedEmail}`, POLICIES.spam);
+  if (!ipLimit.ok || !emailLimit.ok) {
+    return { ok: false, error: "יותר מדי בקשות, חכי קצת" };
+  }
 
   // Make sure the product actually exists + is currently out of stock
   // (defense in depth — UI already only shows the form when stock=0).

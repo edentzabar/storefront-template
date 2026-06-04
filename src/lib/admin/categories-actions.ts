@@ -8,26 +8,27 @@ import { isAdmin } from "@/lib/session";
 
 /* ────────────── Schemas ────────────── */
 
+// SECURITY: hard caps prevent DB bloat / Postgres column issues.
 const baseFields = {
-  slug: z.string().min(1, "slug חובה").regex(/^[a-z0-9-]+$/, "slug: אותיות קטנות באנגלית"),
-  name: z.string().min(1, "שם חובה"),
-  nameEn: z.string().min(1, "שם באנגלית חובה"),
+  slug: z.string().min(1, "slug חובה").max(120).regex(/^[a-z0-9-]+$/, "slug: אותיות קטנות באנגלית"),
+  name: z.string().min(1, "שם חובה").max(120),
+  nameEn: z.string().min(1, "שם באנגלית חובה").max(120),
 };
 
 const categorySchema = z.object({
   ...baseFields,
-  cta: z.string().default(""),
-  image: z.string().nullable().optional(),
-  description: z.string().default(""),
-  seoTitle: z.string().default(""),
-  seoDescription: z.string().default(""),
+  cta: z.string().max(40).default(""),
+  image: z.string().max(2000).nullable().optional(),
+  description: z.string().max(4_000).default(""),
+  seoTitle: z.string().max(120).default(""),
+  seoDescription: z.string().max(300).default(""),
   sortOrder: z.coerce.number().int().default(0),
   isActive: z.coerce.boolean().default(true),
 });
 
 /** Children submitted inline from a top-level category form. */
 const childInput = z.object({
-  id: z.string().optional(), // empty → create new
+  id: z.string().max(60).optional(), // empty → create new
   ...baseFields,
 });
 const childrenSchema = z.array(childInput).default([]);

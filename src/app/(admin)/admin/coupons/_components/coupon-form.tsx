@@ -29,9 +29,12 @@ export function CouponForm({ coupon }: { coupon?: Coupon | null }) {
   const [type, setType] = useState<"percent" | "amount">(coupon?.type ?? "percent");
   const [value, setValue] = useState(String(coupon?.value ?? ""));
   const [minSubtotal, setMinSubtotal] = useState(
-    String(coupon?.minSubtotal ?? 0),
+    coupon?.minSubtotal ? String(coupon.minSubtotal) : "",
   );
   const [maxUses, setMaxUses] = useState(coupon?.maxUses ? String(coupon.maxUses) : "");
+  const [perUserLimit, setPerUserLimit] = useState(
+    coupon?.perUserLimit ? String(coupon.perUserLimit) : "",
+  );
   const [expiresAt, setExpiresAt] = useState(
     coupon?.expiresAt ? format(coupon.expiresAt, "yyyy-MM-dd") : "",
   );
@@ -47,6 +50,7 @@ export function CouponForm({ coupon }: { coupon?: Coupon | null }) {
         value: Number(value),
         minSubtotal: Number(minSubtotal) || 0,
         maxUses: maxUses ? Number(maxUses) : null,
+        perUserLimit: perUserLimit ? Number(perUserLimit) : null,
         expiresAt: expiresAt || null,
         isActive,
       };
@@ -73,7 +77,6 @@ export function CouponForm({ coupon }: { coupon?: Coupon | null }) {
             id="code"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="WELCOME10"
             required
             maxLength={40}
             className="mt-1.5 font-mono uppercase"
@@ -125,14 +128,13 @@ export function CouponForm({ coupon }: { coupon?: Coupon | null }) {
               type="number"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder={type === "percent" ? "10" : "50"}
               min={1}
               max={type === "percent" ? 100 : undefined}
               required
               className="mt-1.5 tabular-nums"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              {type === "percent" ? "אחוז (1-100)" : "סכום בשקלים — יורד מהעגלה"}
+              {type === "percent" ? "אחוז (1-100)" : "סכום בשקלים, יורד מהעגלה"}
             </p>
           </div>
         </div>
@@ -146,7 +148,6 @@ export function CouponForm({ coupon }: { coupon?: Coupon | null }) {
             type="number"
             value={minSubtotal}
             onChange={(e) => setMinSubtotal(e.target.value)}
-            placeholder="0"
             min={0}
             className="mt-1.5 tabular-nums"
           />
@@ -189,6 +190,23 @@ export function CouponForm({ coupon }: { coupon?: Coupon | null }) {
             />
             <p className="text-[11px] text-muted-foreground mt-1">השאר ריק לתוקף קבוע.</p>
           </div>
+        </div>
+
+        <div>
+          <Label htmlFor="perUserLimit" className="text-xs uppercase tracking-wider text-muted-foreground">
+            הגבלה ללקוח
+          </Label>
+          <Input
+            id="perUserLimit"
+            type="number"
+            value={perUserLimit}
+            onChange={(e) => setPerUserLimit(e.target.value)}
+            min={1}
+            className="mt-1.5 tabular-nums"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">
+            כמה פעמים אותו לקוח יכול לנצל את הקופון. השאירי ריק לללא הגבלה. הקלידי 1 כדי לוודא שכל לקוחה משתמשת פעם אחת בלבד (קופון פתיחה).
+          </p>
         </div>
 
         <div className="flex items-center justify-between pt-2 border-t border-border">

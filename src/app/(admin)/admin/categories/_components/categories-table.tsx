@@ -191,27 +191,29 @@ export function CategoriesTable({
         </div>
       )}
 
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
-            <tr>
-              {/* drag-handle column */}
-              <th className="px-2 py-3 w-8"></th>
-              {/* expand-collapse column */}
-              <th className="px-2 py-3 w-8"></th>
-              <th className="px-4 py-3 text-right font-medium">תמונה</th>
-              <th className="px-4 py-3 text-right font-medium">שם</th>
-              <th className="px-4 py-3 text-right font-medium hidden sm:table-cell">מוצרים</th>
-              <th className="px-4 py-3 text-right font-medium">סטטוס</th>
-              <th className="px-4 py-3 text-left font-medium w-24">פעולות</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
+      {/* DndContext lives OUTSIDE the table — it renders its own <div>
+          for the live-region accessibility announcements, and a <div>
+          is illegal inside <tbody>. Sortable rows still work the same;
+          dnd-kit doesn't need to wrap the actual draggable elements. */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="px-2 py-3 w-8"></th>
+                <th className="px-2 py-3 w-8"></th>
+                <th className="px-4 py-3 text-right font-medium">תמונה</th>
+                <th className="px-4 py-3 text-right font-medium">שם</th>
+                <th className="px-4 py-3 text-right font-medium hidden sm:table-cell">מוצרים</th>
+                <th className="px-4 py-3 text-right font-medium">סטטוס</th>
+                <th className="px-4 py-3 text-left font-medium w-24">פעולות</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
               <SortableContext
                 items={topLevelOrder}
                 strategy={verticalListSortingStrategy}
@@ -231,8 +233,6 @@ export function CategoriesTable({
                       onDelete={() => setToDelete(top)}
                       deleting={pending}
                     >
-                      {/* Expanded children panel — compact, indented,
-                          visually distinct from full parent rows */}
                       {isOpen && kids.length > 0 && (
                         <ChildrenPanel
                           parentName={top.name}
@@ -245,10 +245,10 @@ export function CategoriesTable({
                   );
                 })}
               </SortableContext>
-            </DndContext>
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
+      </DndContext>
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>

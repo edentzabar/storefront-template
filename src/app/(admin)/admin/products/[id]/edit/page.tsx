@@ -55,10 +55,7 @@ export default async function EditProductPage({ params }: Params) {
         product={product}
         action={boundAction}
         submitLabel="שמור שינויים"
-        settings={{
-          skuEnabled: settings.products.skuEnabled,
-          editorAutoOpen: settings.images.editorAutoOpen,
-        }}
+        settings={{ skuEnabled: settings.products.skuEnabled }}
       />
     </div>
   );

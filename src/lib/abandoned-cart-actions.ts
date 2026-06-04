@@ -2,21 +2,22 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, getClientIp, POLICIES } from "@/lib/rate-limit";
 
 const itemSchema = z.object({
-  id: z.string(),
-  slug: z.string(),
-  name: z.string(),
-  image: z.string(),
-  size: z.string().nullable(),
-  price: z.coerce.number().int().min(0),
-  qty: z.coerce.number().int().min(1),
+  id: z.string().max(200),
+  slug: z.string().max(200),
+  name: z.string().max(200),
+  image: z.string().max(2000),
+  size: z.string().max(40).nullable(),
+  price: z.coerce.number().int().min(0).max(100_000_00),
+  qty: z.coerce.number().int().min(1).max(99),
 });
 
 const saveSchema = z.object({
-  email: z.string().email("אימייל לא תקין"),
-  customerName: z.string().nullable().optional(),
-  items: z.array(itemSchema).min(1),
+  email: z.string().email("אימייל לא תקין").max(254),
+  customerName: z.string().max(120).nullable().optional(),
+  items: z.array(itemSchema).min(1).max(100),
 });
 
 /**
@@ -28,6 +29,12 @@ const saveSchema = z.object({
 export async function saveAbandonedCart(input: unknown) {
   const parsed = saveSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
+
+  // SECURITY: Rate-limit by IP to prevent spam abandoned-cart records
+  // (which would also queue spam recovery emails).
+  const ip = await getClientIp();
+  const rl = await rateLimit(`abandoned:${ip}`, POLICIES.generic);
+  if (!rl.ok) return { ok: false, error: "יותר מדי בקשות" };
 
   const { email, customerName, items } = parsed.data;
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);

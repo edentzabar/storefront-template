@@ -7,6 +7,7 @@ import { Minus, Plus, ShieldCheck, Truck, CreditCard, RotateCcw } from "lucide-r
 import type { Product, Category } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
+import { useShopSettings } from "@/components/site/shop-settings-provider";
 import { AddToCartButton } from "./add-to-cart-button";
 import { RestockForm } from "./restock-form";
 import { WishlistButton } from "./wishlist-button";
@@ -23,6 +24,7 @@ export function ProductDetail({ product, category }: Props) {
   const [size, setSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [mainImage, setMainImage] = useState(product.image);
+  const { freeShippingMin, warranty, returnDays } = useShopSettings();
 
   const onSale = product.originalPrice != null;
   const discount = onSale
@@ -218,11 +220,11 @@ export function ProductDetail({ product, category }: Props) {
           <ul className="grid grid-cols-2 gap-x-4 gap-y-2.5 mb-8 text-[0.85rem] text-brand-text font-light">
             <li className="flex items-center gap-2">
               <Truck className="size-4 text-brand-accent shrink-0" strokeWidth={1.75} />
-              משלוח חינם מעל ₪{siteConfig.shop.freeShippingMin}
+              משלוח חינם מעל ₪{freeShippingMin}
             </li>
             <li className="flex items-center gap-2">
               <ShieldCheck className="size-4 text-brand-accent shrink-0" strokeWidth={1.75} />
-              {siteConfig.shop.warranty}
+              {warranty}
             </li>
             <li className="flex items-center gap-2">
               <CreditCard className="size-4 text-brand-accent shrink-0" strokeWidth={1.75} />
@@ -230,7 +232,7 @@ export function ProductDetail({ product, category }: Props) {
             </li>
             <li className="flex items-center gap-2">
               <RotateCcw className="size-4 text-brand-accent shrink-0" strokeWidth={1.75} />
-              {siteConfig.shop.returnDays} ימי החזרה
+              {returnDays} ימי החזרה
             </li>
           </ul>
 

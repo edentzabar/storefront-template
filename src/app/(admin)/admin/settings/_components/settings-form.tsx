@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Save, Check } from "lucide-react";
+import { Save, Check, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { EditableSettings } from "@/lib/site-settings";
 import { updateSiteSettings } from "@/lib/admin/settings-actions";
@@ -14,30 +14,20 @@ import { ImageUploadField } from "@/components/admin/image-upload-field";
 export function SettingsForm({ initial }: { initial: EditableSettings }) {
   const [values, setValues] = useState({
     "brand.name": initial.brand.name,
-    "brand.tagline": initial.brand.tagline,
     "brand.logoUrl": initial.brand.logoUrl,
-    "contact.phone": initial.contact.phone,
-    "contact.phoneIntl": initial.contact.phoneIntl,
-    "contact.email": initial.contact.email,
-    "contact.address": initial.contact.address,
-    "contact.instagram": initial.contact.instagram,
-    "contact.whatsapp": initial.contact.whatsapp,
     "shop.freeShippingMin": String(initial.shop.freeShippingMin),
     "shop.warranty": initial.shop.warranty,
     "shop.maxInstallments": String(initial.shop.maxInstallments),
     "shop.returnDays": String(initial.shop.returnDays),
     "shop.shippingDays": initial.shop.shippingDays,
     "hero.image": initial.hero.image,
-    "hero.eyebrow": initial.hero.eyebrow,
-    "hero.titleBefore": initial.hero.titleBefore,
-    "hero.titleAccent": initial.hero.titleAccent,
-    "hero.subtitle": initial.hero.subtitle,
-    "hero.ctaText": initial.hero.ctaText,
-    "hero.ctaHref": initial.hero.ctaHref,
     announcement: initial.announcement,
     // NOTE: AI + chatbot moved to /admin/ai — see ai-settings-form.
+    // NOTE: contact details (phone/email/address/instagram/whatsapp/intro/hours)
+    // intentionally removed from this form. The merchant edits those
+    // directly in src/lib/data/static-pages.ts + src/lib/site-config.ts
+    // per the project owner's preference.
     "products.skuEnabled": initial.products.skuEnabled ? "true" : "false",
-    "images.editorAutoOpen": initial.images.editorAutoOpen ? "true" : "false",
   });
   const [pending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -72,123 +62,44 @@ export function SettingsForm({ initial }: { initial: EditableSettings }) {
         />
       </Section>
 
-      <Section title="המותג" description="שם, טאגליין, לוגו">
-        <Grid>
-          <Field
-            label="שם החנות"
-            value={values["brand.name"]}
-            onChange={set("brand.name")}
-            help="מופיע בלוגו, כותרות עמודים ומטא-data"
-          />
-          <Field
-            label="טאגליין"
-            value={values["brand.tagline"]}
-            onChange={set("brand.tagline")}
-            help="טקסט קטן מתחת ללוגו"
-          />
-        </Grid>
+      <Section title="המותג" description="שם ולוגו">
+        <Field
+          label="שם החנות"
+          value={values["brand.name"]}
+          onChange={set("brand.name")}
+          help="מופיע בכותרות עמודים ובמטא-data"
+        />
         <ImageUploadField
           label="לוגו (אופציונלי)"
           value={values["brand.logoUrl"]}
           onChange={set("brand.logoUrl")}
           purpose="logo"
           aspect="wide"
-          help="PNG/SVG מומלץ עם רקע שקוף. אם משאירים ריק — מוצג שם המותג כטקסט מעוצב."
+          help="PNG/SVG מומלץ עם רקע שקוף. אם משאירים ריק, מוצג שם המותג כטקסט מעוצב."
         />
       </Section>
 
-      <Section title="באנר ראשי (Hero)" description="הסקציה הגדולה בראש דף הבית">
+      <Section title="באנר ראשי (Hero)" description="התמונה הגדולה בראש דף הבית">
         <ImageUploadField
-          label="תמונת רקע"
+          label="תמונת הבאנר"
           value={values["hero.image"]}
           onChange={set("hero.image")}
           purpose="hero"
           aspect="wide"
-          help="מומלץ 2000×1200px לפחות, JPG/WebP. תוצג בפול-וויות עם אפקט זום עדין."
+          help="מומלץ 2000×1200px לפחות, JPG/WebP. הכל בתוך התמונה. בלי כיתובים נוספים מעל."
         />
-        <Grid>
-          <Field
-            label="כותרת קטנה (Eyebrow)"
-            value={values["hero.eyebrow"]}
-            onChange={set("hero.eyebrow")}
-            help='למשל "מבצע מיוחד"'
-          />
-          <Field
-            label="טקסט הכפתור"
-            value={values["hero.ctaText"]}
-            onChange={set("hero.ctaText")}
-            help='למשל "לקולקציה"'
-          />
-        </Grid>
-        <Grid>
-          <Field
-            label="כותרת ראשית — חלק רגיל"
-            value={values["hero.titleBefore"]}
-            onChange={set("hero.titleBefore")}
-            help='למשל "על כל "'
-          />
-          <Field
-            label="כותרת ראשית — חלק מודגש"
-            value={values["hero.titleAccent"]}
-            onChange={set("hero.titleAccent")}
-            help='הטקסט בזהב — למשל "החנות"'
-          />
-        </Grid>
-        <Field
-          label="תיאור"
-          value={values["hero.subtitle"]}
-          onChange={set("hero.subtitle")}
-          multiline
-          help="טקסט קצר מתחת לכותרת"
-        />
-        <Field
-          label="קישור הכפתור"
-          value={values["hero.ctaHref"]}
-          onChange={set("hero.ctaHref")}
-          help='נתיב פנימי (#categories) או לעמוד אחר (/shop)'
-        />
-      </Section>
-
-      <Section title="איש קשר" description="פרטי קשר עם הסטודיו">
-        <Grid>
-          <Field
-            label="טלפון (להצגה)"
-            value={values["contact.phone"]}
-            onChange={set("contact.phone")}
-            help="כפי שיוצג ללקוחות"
-          />
-          <Field
-            label="טלפון בינלאומי (להתקשרות)"
-            value={values["contact.phoneIntl"]}
-            onChange={set("contact.phoneIntl")}
-            help="עם קידומת מדינה, ללא רווחים — למשל +972501234567"
-          />
-        </Grid>
-        <Field
-          label="אימייל"
-          type="email"
-          value={values["contact.email"]}
-          onChange={set("contact.email")}
-        />
-        <Field
-          label="כתובת הסטודיו"
-          value={values["contact.address"]}
-          onChange={set("contact.address")}
-        />
-        <Grid>
-          <Field
-            label="Instagram URL"
-            value={values["contact.instagram"]}
-            onChange={set("contact.instagram")}
-            help="קישור מלא לפרופיל"
-          />
-          <Field
-            label="WhatsApp URL"
-            value={values["contact.whatsapp"]}
-            onChange={set("contact.whatsapp")}
-            help="wa.me/972XXXXXXXXX"
-          />
-        </Grid>
+        <button
+          type="button"
+          onClick={() =>
+            toast.info("בקרוב: יצירת באנר עם AI", {
+              description: "ניתן יהיה לתאר את הבאנר במילים והמערכת תייצר תמונה.",
+            })
+          }
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md border border-dashed border-brand-accent/50 bg-brand-bg-soft/40 text-sm text-brand-text hover:bg-brand-accent/10 hover:border-brand-accent transition-colors"
+        >
+          <Sparkles className="size-4 text-brand-accent" />
+          צור עם AI
+        </button>
       </Section>
 
       <Section title="מדיניות חנות" description="פרטים שמופיעים בעגלה ובדפי המוצרים">
@@ -219,7 +130,7 @@ export function SettingsForm({ initial }: { initial: EditableSettings }) {
             label="זמן אספקה"
             value={values["shop.shippingDays"]}
             onChange={set("shop.shippingDays")}
-            help="טקסט חופשי — למשל ‎2-4 ימי עסקים"
+            help="טקסט חופשי, למשל ‎2-4 ימי עסקים"
           />
         </Grid>
         <Field
@@ -238,18 +149,6 @@ export function SettingsForm({ initial }: { initial: EditableSettings }) {
           value={values["products.skuEnabled"]}
           onChange={set("products.skuEnabled")}
           help="כשמופעל, יופיע סקשן מק״ט בטופס המוצר. לכל מוצר תוכל לסמן אם הוא דורש מק״ט (לא חייב)."
-        />
-      </Section>
-
-      <Section
-        title="תמונות"
-        description="אופן ההעלאה והעריכה של תמונות"
-      >
-        <ToggleField
-          label="פתח את עורך התמונה אוטומטית אחרי העלאה"
-          value={values["images.editorAutoOpen"]}
-          onChange={set("images.editorAutoOpen")}
-          help="כשמופעל — מיד אחרי בחירת קובץ ייפתח האדיטור (חיתוך / הסרת רקע AI / וכו'). כשכבוי — הקובץ עולה ישר, ויש כפתור 'ערוך' לעריכה לפי דרישה."
         />
       </Section>
 

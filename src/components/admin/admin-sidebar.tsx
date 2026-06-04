@@ -12,7 +12,6 @@ import {
   Settings,
   Sparkles,
   Ticket,
-  BarChart3,
   ShoppingBasket,
   MessageSquare,
   Upload,
@@ -57,7 +56,6 @@ export function AdminSidebar({
     { href: "/admin/abandoned-carts", label: "עגלות נטושות", icon: ShoppingBasket },
     { href: "/admin/coupons", label: "קופונים", icon: Ticket },
     { href: "/admin/popups", label: "פופאפים", icon: MessageSquare },
-    { href: "/admin/reports", label: "דוחות", icon: BarChart3 },
     { href: "/admin/ai", label: "AI", icon: Sparkles },
     { href: "/admin/settings", label: "הגדרות", icon: Settings },
   ];

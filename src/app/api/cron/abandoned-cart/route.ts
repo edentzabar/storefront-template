@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail, isEmailConfigured } from "@/lib/email/client";
 import { abandonedCartEmail } from "@/lib/email/abandoned-cart-template";
 import { siteConfig } from "@/lib/site-config";
+import { signToken } from "@/lib/tokens";
 
 /**
  * Vercel Cron — runs hourly to email customers whose carts have been
@@ -48,7 +49,20 @@ export async function GET(req: Request) {
 
   for (const cart of candidates) {
     try {
-      const recoveryUrl = `${siteConfig.url}/cart?recover=${cart.recoveryToken}`;
+      // SECURITY: Sign a fresh HMAC token instead of embedding the
+      // raw cuid `recoveryToken` from the DB. Two benefits:
+      //   • Stateless — verifier doesn't need to query the DB row
+      //     by token, just verify the signature and read cartId.
+      //   • Time-bounded — token auto-expires after 14 days, matching
+      //     the cart's own TTL above. Leaked link past expiry is dead.
+      // The /api/cart/recover route accepts BOTH formats (signed +
+      // legacy cuid) for backwards compat, so old emails in flight
+      // still work.
+      const token = signToken(
+        { cartId: cart.id },
+        14 * 24 * 60 * 60_000,
+      );
+      const recoveryUrl = `${siteConfig.url}/cart?recover=${encodeURIComponent(token)}`;
       const tpl = abandonedCartEmail({
         customerName: cart.customerName,
         items: cart.items as unknown as Parameters<typeof abandonedCartEmail>[0]["items"],

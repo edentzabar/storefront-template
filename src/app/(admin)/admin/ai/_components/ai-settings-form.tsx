@@ -16,11 +16,21 @@ import type { EditableSettings } from "@/lib/site-settings";
  * surface can grow (cost tracking, model picker per-feature, prompt
  * library, etc.) without bloating the general settings page.
  */
-export function AiSettingsForm({ initial }: { initial: EditableSettings }) {
+export function AiSettingsForm({
+  initial,
+  apiKeyConfigured,
+}: {
+  initial: EditableSettings;
+  /** True when an AI key is set on the server (DB or env). The actual
+   *  value is never sent to the browser. */
+  apiKeyConfigured: boolean;
+}) {
   const [values, setValues] = useState({
     "ai.enabled": initial.ai.enabled ? "true" : "false",
     "ai.provider": initial.ai.provider,
-    "ai.apiKey": initial.ai.apiKey,
+    // SECURITY: starts empty. An empty submission is interpreted as
+    // "leave the existing key untouched" by handleSubmit below.
+    "ai.apiKey": "",
     "ai.model": initial.ai.model,
     "chatbot.enabled": initial.chatbot.enabled ? "true" : "false",
     "chatbot.welcomeMessage": initial.chatbot.welcomeMessage,
@@ -36,10 +46,18 @@ export function AiSettingsForm({ initial }: { initial: EditableSettings }) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      const result = await updateSiteSettings(values);
+      // If the user didn't type a new API key, omit the field from the
+      // payload so the server keeps the existing one rather than
+      // overwriting it with an empty string. Saves the merchant from
+      // accidentally erasing the key by re-saving the form.
+      const payload: Record<string, string> = { ...values };
+      if (payload["ai.apiKey"] === "") delete payload["ai.apiKey"];
+      const result = await updateSiteSettings(payload);
       if (result.ok) {
         toast.success("ההגדרות נשמרו");
         setSavedAt(Date.now());
+        // Wipe the new-key input from memory after save.
+        setValues((prev) => ({ ...prev, "ai.apiKey": "" }));
       } else {
         toast.error(result.error ?? "שגיאה בשמירה");
       }
@@ -53,14 +71,14 @@ export function AiSettingsForm({ initial }: { initial: EditableSettings }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <Section
         title="ספק AI"
-        description="כל פיצ׳רי ה-AI באתר עוברים דרך כאן — תיאור אוטומטי, צ׳אטבוט, וכל מה שיתווסף בעתיד."
+        description="כל פיצ׳רי ה-AI באתר עוברים דרך כאן, תיאור אוטומטי, צ׳אטבוט, וכל מה שיתווסף בעתיד."
         icon={<Sparkles className="size-4 text-brand-accent" />}
       >
         <ToggleField
           label="הפעל AI"
           value={values["ai.enabled"]}
           onChange={set("ai.enabled")}
-          help="כשכבוי — כפתורי ה-AI באדמין מציגים הודעה, ולא רצים."
+          help="כשכבוי, כפתורי ה-AI באדמין מציגים הודעה, ולא רצים."
         />
         <div className={aiOn ? "" : "opacity-50 pointer-events-none"}>
           <Grid>
@@ -69,12 +87,12 @@ export function AiSettingsForm({ initial }: { initial: EditableSettings }) {
               value={values["ai.provider"]}
               onChange={set("ai.provider")}
               options={[
-                { value: "", label: "— בחר ספק —" },
+                { value: "", label: "בחר ספק" },
                 { value: "anthropic", label: "Anthropic (Claude)" },
                 { value: "openai", label: "OpenAI (GPT)" },
                 { value: "google", label: "Google (Gemini)" },
               ]}
-              help="כרגע רק Anthropic מחובר במלואו — האחרים stubs."
+              help="כרגע רק Anthropic מחובר במלואו, האחרים stubs."
             />
             <Field
               label="מודל (לא חובה)"
@@ -83,13 +101,34 @@ export function AiSettingsForm({ initial }: { initial: EditableSettings }) {
               help="ריק = ברירת מחדל של הספק. למשל claude-sonnet-4-5"
             />
           </Grid>
-          <Field
-            label="API Key"
-            type="password"
-            value={values["ai.apiKey"]}
-            onChange={set("ai.apiKey")}
-            help="ריק = ייקרא ממשתנה הסביבה (ANTHROPIC_API_KEY וכו׳). מומלץ env בפרודקשן."
-          />
+          <div>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+              API Key
+            </Label>
+            <div className="mt-1.5 flex items-center gap-2">
+              <span
+                className={
+                  apiKeyConfigured
+                    ? "text-xs px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                    : "text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground"
+                }
+              >
+                {apiKeyConfigured ? "✓ מוגדר" : "לא מוגדר"}
+              </span>
+            </div>
+            <Input
+              type="password"
+              placeholder={apiKeyConfigured ? "הזיני מפתח חדש כדי להחליף" : "הדביקי את המפתח כאן"}
+              value={values["ai.apiKey"]}
+              onChange={(e) => set("ai.apiKey")(e.target.value)}
+              className="mt-2"
+              autoComplete="off"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              ריק = ייקרא ממשתנה הסביבה (ANTHROPIC_API_KEY וכו׳). מומלץ env בפרודקשן.
+              הערך עצמו לא מוצג, להחלפה הקלידי מפתח חדש.
+            </p>
+          </div>
         </div>
       </Section>
 

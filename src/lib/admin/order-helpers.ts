@@ -8,12 +8,15 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   cancelled: "בוטלה",
 };
 
+// Semi-transparent backgrounds keep these readable on both the bright
+// admin theme and the dark theme without needing a separate dark variant
+// per swatch (10% opacity on a dark bg = subtle tint, on white = soft pastel).
 export const STATUS_COLORS: Record<OrderStatus, string> = {
-  new: "bg-brand-accent/15 text-brand-accent-dark",
-  processing: "bg-blue-50 text-blue-700",
-  shipped: "bg-indigo-50 text-indigo-700",
-  delivered: "bg-green-50 text-green-700",
-  cancelled: "bg-brand-bg-soft text-brand-text-soft",
+  new: "bg-brand-accent/15 text-brand-accent-dark dark:text-brand-accent-light",
+  processing: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
+  shipped: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
+  delivered: "bg-green-500/10 text-green-700 dark:text-green-300",
+  cancelled: "bg-muted text-muted-foreground",
 };
 
 export const SHIPPING_LABELS = {

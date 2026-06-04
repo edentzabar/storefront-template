@@ -23,10 +23,9 @@ type Props = {
   product?: ProductWithCategory | null;
   action: (state: ProductFormState, formData: FormData) => Promise<ProductFormState>;
   submitLabel?: string;
-  /** Pulled from /admin/settings — drives SKU + image-editor behavior. */
+  /** Pulled from /admin/settings — drives the SKU section. */
   settings: {
     skuEnabled: boolean;
-    editorAutoOpen: boolean;
   };
 };
 
@@ -52,11 +51,17 @@ export function ProductForm({
   const [name, setName] = useState(product?.name ?? "");
   const [slug, setSlug] = useState(product?.slug ?? "");
 
-  // SKU is conditionally shown (global toggle) AND per-product opt-in.
-  // For existing products, we start the toggle on if they already have
-  // a SKU saved; new products start with it off.
-  const [hasSku, setHasSku] = useState(Boolean(product?.sku));
+  // SKU rendering rule:
+  //   global setting ON  → SKU input is always shown on every product
+  //                        (no per-product opt-in needed).
+  //   global setting OFF → SKU is hidden by default. Each product gets a
+  //                        small "+ הוסף מק״ט למוצר זה" button that
+  //                        reveals the input for that single product.
+  // For an existing product that already has a SKU when the global
+  // setting is OFF, we start opted-in so the field stays visible.
+  const [optedIn, setOptedIn] = useState(Boolean(product?.sku));
   const [sku, setSku] = useState(product?.sku ?? "");
+  const showSkuInput = settings.skuEnabled || optedIn;
 
   // Category picker — same 2-level pattern as before
   const initialIds = useMemo(() => {
@@ -111,19 +116,110 @@ export function ProductForm({
         <input type="hidden" name="slug" value={slug} />
         <input type="hidden" name="nameEn" value={name} />
 
-        <CategoryPicker
-          categories={categories}
-          topLevelId={topLevelId}
-          subcategoryId={subcategoryId}
-          subOptions={subOptions}
-          selectedTopLevel={selectedTopLevel}
-          onTopLevelChange={(v) => {
-            setTopLevelId(v);
-            setSubcategoryId("");
-          }}
-          onSubcategoryChange={setSubcategoryId}
-          error={state.fieldErrors?.categoryId}
-        />
+        {/* Category on the right (start in RTL). When SKU is globally
+            enabled, the input sits on the left of the same row, always
+            shown. Otherwise the category takes the full row and the
+            per-product SKU opt-in lives in a slim slot below. */}
+        <Grid className={showSkuInput ? undefined : "md:grid-cols-1"}>
+          <label className="block">
+            <FieldLabel required>קטגוריה</FieldLabel>
+            <select
+              value={topLevelId}
+              onChange={(e) => {
+                setTopLevelId(e.target.value);
+                setSubcategoryId("");
+              }}
+              required
+              className={cn(
+                "w-full px-4 py-2.5 border bg-background focus:outline-none focus:border-foreground text-base rounded-md",
+                state.fieldErrors?.categoryId ? "border-destructive" : "border-border",
+              )}
+            >
+              <option value="">בחר קטגוריה…</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            {state.fieldErrors?.categoryId && (
+              <FieldHelp tone="error">{state.fieldErrors.categoryId}</FieldHelp>
+            )}
+          </label>
+
+          {showSkuInput && (
+            <div>
+              <div className="flex items-center justify-between gap-3 mb-1.5">
+                <FieldLabel>מק״ט</FieldLabel>
+                {/* When global is OFF but this product opted in, give
+                    a way to take the field back off again. */}
+                {!settings.skuEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOptedIn(false);
+                      setSku("");
+                    }}
+                    className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    הסר מק״ט
+                  </button>
+                )}
+              </div>
+              <input
+                name="sku"
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                dir="ltr"
+                placeholder="JC-RG-001"
+                className={cn(
+                  "w-full px-4 py-2.5 border bg-background focus:outline-none focus:border-foreground text-base rounded-md",
+                  state.fieldErrors?.sku ? "border-destructive" : "border-border",
+                )}
+              />
+              {state.fieldErrors?.sku && (
+                <FieldHelp tone="error">{state.fieldErrors.sku}</FieldHelp>
+              )}
+            </div>
+          )}
+        </Grid>
+
+        {subOptions.length > 0 && (
+          <label className="block">
+            <FieldLabel>תת-קטגוריה (אופציונלי)</FieldLabel>
+            <select
+              value={subcategoryId}
+              onChange={(e) => setSubcategoryId(e.target.value)}
+              className="w-full px-4 py-2.5 border border-border bg-background focus:outline-none focus:border-foreground text-base rounded-md"
+            >
+              <option value="">ללא (השאר ב-{selectedTopLevel?.name})</option>
+              {subOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <FieldHelp>בחירה תשייך את המוצר לתת-קטגוריה במקום לקטגוריה הראשית.</FieldHelp>
+          </label>
+        )}
+
+        {/* When the global SKU setting is OFF and this product hasn't
+            opted in yet, expose a small ghost button so the merchant
+            can attach a SKU to this single product. */}
+        {!settings.skuEnabled && !optedIn && (
+          <>
+            <button
+              type="button"
+              onClick={() => setOptedIn(true)}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 border border-dashed border-border hover:border-foreground rounded-md"
+            >
+              <span className="text-base leading-none">+</span>
+              הוסף מק״ט למוצר זה
+            </button>
+            <input type="hidden" name="sku" value="" />
+          </>
+        )}
+
         <input type="hidden" name="categoryId" value={effectiveCategoryId} />
       </Section>
 
@@ -138,8 +234,7 @@ export function ProductForm({
           required
           purpose={`product-${product?.id ?? "new"}`}
           aspect="square"
-          autoOpenEditor={settings.editorAutoOpen}
-          help="העלאה ממכשיר או הדבקת URL. JPG/PNG/WebP — עד 8MB."
+          help="העלאה ממכשיר או הדבקת URL. JPG/PNG/WebP, עד 8MB. אחרי ההעלאה כפתור ׳ערוך׳ פותח אדיטור (חיתוך, הסרת רקע AI, גוונים)."
         />
         <MultiImageField
           label="תמונות נוספות לגלריה"
@@ -157,7 +252,7 @@ export function ProductForm({
           label="תיאור קצר"
           name="meta"
           defaultValue={product?.meta ?? ""}
-          help='שורה אחת מתחת לשם המוצר — למשל: חומר, גודל או מאפיין בולט'
+          help='שורה אחת מתחת לשם המוצר. למשל: חומר, גודל או מאפיין בולט'
           error={state.fieldErrors?.meta}
         />
         <AiDescriptionTextarea
@@ -211,46 +306,14 @@ export function ProductForm({
             error={state.fieldErrors?.stock}
           />
         </Grid>
-        <ControlledField
-          label="תווית (badge)"
-          name="badge"
-          defaultValue={product?.badge ?? ""}
-          help='טקסט קצר על תמונת המוצר — "חדש", "מבצע", "נמכר". כל התוויות מוצגות באותו עיצוב.'
-          error={state.fieldErrors?.badge}
-        />
+        {/* badge ("תווית") removed per merchant feedback — too rarely
+            useful to be worth a field on every product. Set via DB
+            import or a future bulk action if needed. We submit empty
+            so the schema gets a stable value. */}
+        <input type="hidden" name="badge" value="" />
       </Section>
 
-      {/* ─── 5. SKU (conditional on global setting + per-product toggle) ─── */}
-      {settings.skuEnabled && (
-        <Section title="מק״ט">
-          <ToggleRow
-            label="למוצר הזה יש מק״ט"
-            checked={hasSku}
-            onChange={(checked) => {
-              setHasSku(checked);
-              if (!checked) setSku("");
-            }}
-            help="סמן רק אם אתה מנהל מלאי לפי מק״ט"
-          />
-          {hasSku && (
-            <ControlledField
-              label="מק״ט (SKU)"
-              name="sku"
-              value={sku}
-              onChange={setSku}
-              error={state.fieldErrors?.sku}
-              help='מק״ט פנימי — למשל JC-RG-001'
-              dir="ltr"
-            />
-          )}
-          {!hasSku && <input type="hidden" name="sku" value="" />}
-        </Section>
-      )}
-      {/* When SKU is GLOBALLY disabled, always send empty so the schema
-          doesn't reject — server defaults sku to "" anyway. */}
-      {!settings.skuEnabled && <input type="hidden" name="sku" value="" />}
-
-      {/* ─── 6. DISPLAY ─── */}
+      {/* ─── 5. DISPLAY ─── */}
       <Section title="הצגה">
         <Grid>
           <ControlledField
@@ -265,7 +328,7 @@ export function ProductForm({
               label="פעיל באתר"
               name="isActive"
               defaultChecked={product?.isActive ?? true}
-              help="מוסתר אם לא מסומן — לקוחות לא יראו"
+              help="מוסתר אם לא מסומן, לקוחות לא יראו"
             />
             <CheckboxField
               label="מוצג בדף הבית"
@@ -298,69 +361,6 @@ export function ProductForm({
 
 /* ──────────────── helpers ──────────────── */
 
-function CategoryPicker({
-  categories,
-  topLevelId,
-  subcategoryId,
-  subOptions,
-  selectedTopLevel,
-  onTopLevelChange,
-  onSubcategoryChange,
-  error,
-}: {
-  categories: CategoryTreeForPicker;
-  topLevelId: string;
-  subcategoryId: string;
-  subOptions: { id: string; name: string }[];
-  selectedTopLevel: { name: string } | undefined;
-  onTopLevelChange: (v: string) => void;
-  onSubcategoryChange: (v: string) => void;
-  error?: string;
-}) {
-  return (
-    <Grid>
-      <label className="block">
-        <FieldLabel required>קטגוריה</FieldLabel>
-        <select
-          value={topLevelId}
-          onChange={(e) => onTopLevelChange(e.target.value)}
-          required
-          className={cn(
-            "w-full px-4 py-2.5 border bg-background focus:outline-none focus:border-foreground text-base rounded-md",
-            error ? "border-destructive" : "border-border",
-          )}
-        >
-          <option value="">בחר קטגוריה…</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        {error && <FieldHelp tone="error">{error}</FieldHelp>}
-      </label>
-      {subOptions.length > 0 && (
-        <label className="block">
-          <FieldLabel>תת-קטגוריה (אופציונלי)</FieldLabel>
-          <select
-            value={subcategoryId}
-            onChange={(e) => onSubcategoryChange(e.target.value)}
-            className="w-full px-4 py-2.5 border border-border bg-background focus:outline-none focus:border-foreground text-base rounded-md"
-          >
-            <option value="">— ללא (השאר ב-{selectedTopLevel?.name})</option>
-            {subOptions.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <FieldHelp>בחירה תשייך את המוצר לתת-קטגוריה במקום לקטגוריה הראשית.</FieldHelp>
-        </label>
-      )}
-    </Grid>
-  );
-}
-
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-card border border-border rounded-lg p-6">
@@ -372,8 +372,20 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Grid({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-1 md:grid-cols-2 gap-5">{children}</div>;
+function Grid({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  // className lets callers collapse to a single column when only one
+  // child renders (e.g. SKU section hidden because it's globally off).
+  return (
+    <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-5", className)}>
+      {children}
+    </div>
+  );
 }
 
 /** Bumped from text-xs uppercase muted → text-sm regular foreground.
@@ -549,3 +561,4 @@ function ToggleRow({
     </label>
   );
 }
+

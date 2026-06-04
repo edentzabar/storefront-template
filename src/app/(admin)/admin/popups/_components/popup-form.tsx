@@ -40,7 +40,7 @@ const TRIGGERS: { value: PopupTrigger; label: string; help: string }[] = [
 const FREQUENCIES: { value: PopupFrequency; label: string; help: string }[] = [
   { value: "session", label: "פעם ב-session", help: "עד שהלקוח סוגר את החלון" },
   { value: "days", label: "פעם בכמה ימים", help: "לא יוצג שוב למספר ימים שנבחר" },
-  { value: "once", label: "פעם אחת לעולם", help: "אם הלקוח ראה — לא יראה שוב לעולם" },
+  { value: "once", label: "פעם אחת לעולם", help: "אם הלקוח ראה, לא יראה שוב לעולם" },
 ];
 
 const AUDIENCES: { value: PopupAudience; label: string }[] = [
@@ -161,7 +161,7 @@ export function PopupForm({ popup }: { popup?: PopupCampaign | null }) {
             onChange={setImageUrl}
             purpose="popup"
             aspect="wide"
-            help="מומלץ 1200×675 (16:9). אם ריק — הפופאפ יוצג בלי תמונה."
+            help="מומלץ 1200×675 (16:9). אם ריק, הפופאפ יוצג בלי תמונה."
           />
         </section>
 
@@ -186,7 +186,7 @@ export function PopupForm({ popup }: { popup?: PopupCampaign | null }) {
               />
             </Field>
           </Grid>
-          <Field label="קוד הנחה (אופציונלי)" help="יוצג בולט בפופאפ. תואם לקופון שיצרת.">
+          <Field label="קוד קופון (אופציונלי)" help="יוצג בולט בפופאפ. תואם לקופון שיצרת.">
             <Input
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
@@ -223,8 +223,8 @@ export function PopupForm({ popup }: { popup?: PopupCampaign | null }) {
                 label={triggerValueLabel}
                 help={
                   triggerType === "delay"
-                    ? "השהיה בשניות (1–600)"
-                    : "אחוז גלילה (1–100)"
+                    ? "השהיה בשניות (1,600)"
+                    : "אחוז גלילה (1,100)"
                 }
               >
                 <Input
@@ -265,7 +265,7 @@ export function PopupForm({ popup }: { popup?: PopupCampaign | null }) {
               </Select>
             </Field>
             {frequencyType === "days" && (
-              <Field label="מספר ימים" help="לא יוצג שוב למספר ימים שתבחר (1–365)">
+              <Field label="מספר ימים" help="לא יוצג שוב למספר ימים שתבחר (1,365)">
                 <Input
                   type="number"
                   value={frequencyDays}
@@ -316,14 +316,14 @@ export function PopupForm({ popup }: { popup?: PopupCampaign | null }) {
             </Field>
           </Grid>
           <Grid>
-            <Field label="תאריך התחלה" help="אופציונלי — לקמפיינים מתוזמנים">
+            <Field label="תאריך התחלה" help="אופציונלי, לקמפיינים מתוזמנים">
               <Input
                 type="date"
                 value={startsAt}
                 onChange={(e) => setStartsAt(e.target.value)}
               />
             </Field>
-            <Field label="תאריך סיום" help="אופציונלי — אחרי תאריך זה הפופאפ נכבה אוטומטית">
+            <Field label="תאריך סיום" help="אופציונלי, אחרי תאריך זה הפופאפ נכבה אוטומטית">
               <Input
                 type="date"
                 value={endsAt}

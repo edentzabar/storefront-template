@@ -13,16 +13,22 @@ const SETTINGS_TAG = "site-settings";
 export type EditableSettings = {
   brand: {
     name: string;
+    /** @deprecated kept for backwards-compat; new clients leave empty. */
     tagline: string;
     logoUrl: string; // empty = use default text logo
   };
   contact: {
     phone: string;
+    /** @deprecated kept for backwards-compat; we normalize `phone` for tel: links. */
     phoneIntl: string;
     email: string;
     address: string;
     instagram: string;
     whatsapp: string;
+    /** Opening paragraph on /contact. */
+    intro: string;
+    /** Opening hours line on /contact. */
+    hours: string;
   };
   shop: {
     freeShippingMin: number;
@@ -73,13 +79,6 @@ export type EditableSettings = {
      *  aren't asked for a code they don't have. */
     skuEnabled: boolean;
   };
-  /** Image upload / editor behaviour shared by every upload field. */
-  images: {
-    /** When true, the in-browser editor opens automatically after
-     *  the user picks a file. When false, the file uploads directly
-     *  and the merchant can click "ערוך" if they want to edit it. */
-    editorAutoOpen: boolean;
-  };
 };
 
 export const SETTING_KEYS = [
@@ -92,6 +91,8 @@ export const SETTING_KEYS = [
   "contact.address",
   "contact.instagram",
   "contact.whatsapp",
+  "contact.intro",
+  "contact.hours",
   "shop.freeShippingMin",
   "shop.warranty",
   "shop.maxInstallments",
@@ -114,7 +115,6 @@ export const SETTING_KEYS = [
   "chatbot.systemPromptExtra",
   "chatbot.position",
   "products.skuEnabled",
-  "images.editorAutoOpen",
 ] as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[number];
@@ -129,6 +129,8 @@ function defaults(): EditableSettings {
       address: siteConfig.contact.address,
       instagram: siteConfig.contact.instagram,
       whatsapp: siteConfig.contact.whatsapp,
+      intro: "נשמח לעמוד לרשותכם בכל שאלה. ניתן ליצור איתנו קשר באחת מהדרכים הבאות, או למלא את הטופס ונחזור אליכם בהקדם.",
+      hours: "א׳ עד ה׳ 10:00 עד 19:00, ו׳ 10:00 עד 14:00",
     },
     shop: {
       freeShippingMin: siteConfig.shop.freeShippingMin,
@@ -161,9 +163,6 @@ function defaults(): EditableSettings {
     },
     products: {
       skuEnabled: false,
-    },
-    images: {
-      editorAutoOpen: false,
     },
   };
 }

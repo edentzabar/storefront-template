@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { Button } from "@/components/ui/button";
 import type { EditableSettings } from "@/lib/site-settings";
 import type { CategoryTreeNode } from "@/lib/queries";
+import { telHref } from "@/lib/format";
 
 const FIXED_LEFT = [{ id: "all", label: "כל הקולקציה", href: "/shop" }] as const;
 const FIXED_RIGHT = [{ id: "sale", label: "מבצעים", href: "/sale" }] as const;
@@ -140,7 +141,7 @@ export function MobileNav({
         {/* Contact footer */}
         <div className="border-t border-brand-border px-5 py-4 space-y-2.5">
           <a
-            href={`tel:${settings.contact.phoneIntl}`}
+            href={telHref(settings.contact.phone)}
             className="flex items-center gap-2.5 text-sm text-brand-text hover:text-brand-accent transition-colors no-underline"
           >
             <Phone className="size-3.5 text-brand-accent" strokeWidth={1.75} />

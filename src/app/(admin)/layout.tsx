@@ -32,7 +32,7 @@ export default async function AdminLayout({
     notifications.push({
       id: `order-${o.id}`,
       type: "pending-order",
-      title: `הזמנה חדשה — ${o.customerFullName}`,
+      title: `הזמנה חדשה, ${o.customerFullName}`,
       description: `${o._count.items} פריטים · ₪${o.total.toLocaleString("he-IL")}`,
       href: `/admin/orders/${o.id}`,
       time: formatDistanceToNow(o.createdAt, { addSuffix: true, locale: he }),
@@ -43,7 +43,7 @@ export default async function AdminLayout({
     notifications.push({
       id: `stock-${p.id}`,
       type: "low-stock",
-      title: `מלאי נמוך — ${p.name}`,
+      title: `מלאי נמוך, ${p.name}`,
       description: `${p.stock} יחידות במלאי · ${p.sku}`,
       href: `/admin/products/${p.id}/edit`,
     });

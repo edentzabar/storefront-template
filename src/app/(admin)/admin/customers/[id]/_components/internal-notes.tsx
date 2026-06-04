@@ -31,7 +31,7 @@ export function InternalNotes({
       <Textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="הערות פנימיות על הלקוח — שיחה שהייתה, העדפות, מידע שעוזר לצוות..."
+        placeholder="הערות פנימיות על הלקוח, שיחה שהייתה, העדפות, מידע שעוזר לצוות..."
         className="min-h-[100px] text-sm resize-none"
         maxLength={4000}
       />

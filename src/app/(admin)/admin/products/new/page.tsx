@@ -40,10 +40,7 @@ export default async function NewProductPage() {
         categories={categories}
         action={createProduct}
         submitLabel="צור מוצר"
-        settings={{
-          skuEnabled: settings.products.skuEnabled,
-          editorAutoOpen: settings.images.editorAutoOpen,
-        }}
+        settings={{ skuEnabled: settings.products.skuEnabled }}
       />
     </div>
   );

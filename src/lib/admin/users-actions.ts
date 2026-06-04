@@ -2,27 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { isAdmin, getCurrentUser } from "@/lib/session";
+import { isAdmin } from "@/lib/session";
 
-const roleSchema = z.enum(UserRole);
+/**
+ * Role promotion was intentionally removed from the admin panel:
+ * one store owner managing one admin account keeps the attack
+ * surface tight (no privilege escalation if the account is
+ * compromised, no accidental self-lockout from a misclick).
+ *
+ * If you really need to promote a customer to admin, run from the
+ * project root:
+ *   pnpm db:make-admin <email>
+ */
 
 async function assertAdmin() {
   if (!(await isAdmin())) throw new Error("Unauthorized");
-}
-
-export async function updateUserRole(userId: string, role: string) {
-  await assertAdmin();
-  const me = await getCurrentUser();
-  if (me?.id === userId) {
-    return { ok: false, error: "אי אפשר לשנות את התפקיד של עצמך" };
-  }
-  const parsed = roleSchema.safeParse(role);
-  if (!parsed.success) return { ok: false, error: "תפקיד לא חוקי" };
-  await prisma.user.update({ where: { id: userId }, data: { role: parsed.data } });
-  revalidatePath("/admin/customers");
-  return { ok: true };
 }
 
 // ---------- tags & internal notes ----------

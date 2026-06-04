@@ -88,6 +88,7 @@ model User {
   accounts      Account[]
   orders        Order[]
   addresses     Address[]
+  auditLogs     AuditLog[]
 
   @@map("user")
 }
@@ -215,6 +216,11 @@ model Address {
 
 model Order {
   id               String         @id
+  /// Cryptographically random secret returned to the customer on
+  /// checkout. The /checkout/confirmation/[id] page accepts ?t=<token>
+  /// as proof of ownership for guest orders (alongside admin role or
+  /// userId match for logged-in orders).
+  accessToken      String?
   userId           String?
   user             User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   status           OrderStatus    @default(new)
@@ -244,7 +250,51 @@ model Order {
   updatedAt        DateTime       @updatedAt
   items            OrderItem[]
 
+  // Hot query paths:
+  //   • Account/orders page filters by userId (logged-in customer)
+  //   • Admin list filters by status + sorts by createdAt
+  //   • perUserLimit coupon check counts by (couponId, customerEmail)
+  @@index([userId])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([couponId, customerEmail])
   @@map("orders")
+}
+
+/// Append-only audit log for admin mutations. Every state-changing
+/// admin action (creating a product, changing an order status, editing
+/// a coupon, changing site settings) writes one row. Used for forensics
+/// after suspected account compromise, dispute resolution with merchants,
+/// and compliance.
+///
+/// Designed to be CHEAP and write-once. Never updated. We don't even
+/// index `userId` because the typical query is "show me the last N rows"
+/// (ordered by createdAt desc) and admin volume is low.
+model AuditLog {
+  id           String   @id @default(cuid())
+  /// User who performed the action. Null = system / cron / unauthenticated
+  /// edge case (we should never see this in practice for admin actions).
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Human-readable action slug. Convention: `<resource>:<verb>`,
+  /// e.g. `product:create`, `order:status:update`, `coupon:delete`.
+  action       String
+  /// Resource kind (`product`, `order`, `coupon`, `category`, …).
+  resourceType String
+  /// Resource ID. Some actions touch many rows at once (bulk delete);
+  /// in that case we write one log row per resource.
+  resourceId   String?
+  /// Snapshot of changed fields BEFORE the mutation. Null on create.
+  before       Json?
+  /// Snapshot of changed fields AFTER the mutation. Null on delete.
+  after        Json?
+  /// Best-effort client IP (from x-forwarded-for). Useful when the
+  /// admin account is suspected to have been hijacked.
+  ip           String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([resourceType, resourceId])
+  @@map("audit_log")
 }
 
 model AbandonedCart {
@@ -330,8 +380,14 @@ model Coupon {
   type        CouponType
   value       Int // % (1-100) when type=percent, agorot when type=amount
   minSubtotal Int        @default(0) // minimum cart subtotal in agorot
-  maxUses     Int? // null = unlimited
+  maxUses     Int? // null = unlimited, total usage cap across all customers
   uses        Int        @default(0)
+  /// Per-customer cap. Default null = unlimited per customer.
+  /// `1` means "each customer can use this code exactly once" — the
+  /// common "welcome" coupon pattern. Enforced in placeOrder by counting
+  /// prior orders with the same couponId and the same userId OR
+  /// customerEmail.
+  perUserLimit Int?
   expiresAt   DateTime?
   isActive    Boolean    @default(true)
   createdAt   DateTime   @default(now())

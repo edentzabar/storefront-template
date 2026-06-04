@@ -5,6 +5,7 @@ import { z } from "zod";
 import { CouponType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/session";
+import { audit } from "@/lib/audit";
 
 async function assertAdmin() {
   if (!(await isAdmin())) throw new Error("Unauthorized");
@@ -21,6 +22,8 @@ const couponSchema = z.object({
   value: z.coerce.number().int().min(1, "ערך חייב להיות חיובי"),
   minSubtotal: z.coerce.number().int().min(0).default(0),
   maxUses: z.coerce.number().int().min(1).nullable().default(null),
+  /** null = unlimited, 1 = "one per customer" (common welcome flow). */
+  perUserLimit: z.coerce.number().int().min(1).nullable().default(null),
   expiresAt: z.string().nullable().default(null),
   isActive: z.boolean().default(true),
 });
@@ -45,6 +48,7 @@ function normalize(input: unknown) {
       value: data.value,
       minSubtotal: data.minSubtotal,
       maxUses: data.maxUses,
+      perUserLimit: data.perUserLimit,
       expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
       isActive: data.isActive,
     },
@@ -57,6 +61,7 @@ export async function createCoupon(input: unknown) {
   if (!normalized.ok) return { ok: false, error: normalized.error };
   try {
     const c = await prisma.coupon.create({ data: normalized.data });
+    await audit("coupon:create", "coupon", c.id, { after: normalized.data });
     revalidatePath("/admin/coupons");
     return { ok: true, id: c.id };
   } catch (err) {
@@ -70,8 +75,10 @@ export async function updateCoupon(id: string, input: unknown) {
   await assertAdmin();
   const normalized = normalize(input);
   if (!normalized.ok) return { ok: false, error: normalized.error };
+  const before = await prisma.coupon.findUnique({ where: { id } });
   try {
     await prisma.coupon.update({ where: { id }, data: normalized.data });
+    await audit("coupon:update", "coupon", id, { before, after: normalized.data });
     revalidatePath("/admin/coupons");
     revalidatePath(`/admin/coupons/${id}/edit`);
     return { ok: true };
@@ -84,18 +91,28 @@ export async function updateCoupon(id: string, input: unknown) {
 
 export async function deleteCoupon(id: string) {
   await assertAdmin();
+  const before = await prisma.coupon.findUnique({ where: { id } });
   try {
     await prisma.coupon.delete({ where: { id } });
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "שגיאה" };
   }
+  await audit("coupon:delete", "coupon", id, { before });
   revalidatePath("/admin/coupons");
   return { ok: true };
 }
 
 export async function toggleCouponActive(id: string, isActive: boolean) {
   await assertAdmin();
+  const before = await prisma.coupon.findUnique({
+    where: { id },
+    select: { isActive: true },
+  });
   await prisma.coupon.update({ where: { id }, data: { isActive } });
+  await audit("coupon:toggle", "coupon", id, {
+    before: { isActive: before?.isActive },
+    after: { isActive },
+  });
   revalidatePath("/admin/coupons");
   return { ok: true };
 }

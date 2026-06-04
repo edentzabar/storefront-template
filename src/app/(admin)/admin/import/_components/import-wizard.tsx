@@ -73,14 +73,14 @@ export function ImportWizard({ categories }: { categories: Category[] }) {
       complete: (res) => {
         setParsing(false);
         if (res.errors.length > 0 && !res.data.length) {
-          toast.error("שגיאה בקריאת הקובץ — ודאו ש-encoding תקין (UTF-8)");
+          toast.error("שגיאה בקריאת הקובץ, ודאו ש-encoding תקין (UTF-8)");
           return;
         }
         const headers =
           res.meta.fields?.map((f) => f.trim()).filter(Boolean) ?? [];
         const parsed = parseImportRows(headers, res.data);
         if (parsed.format === "unknown") {
-          toast.error("פורמט לא מזוהה — תומכים כרגע ב-Shopify ו-WooCommerce");
+          toast.error("פורמט לא מזוהה, תומכים כרגע ב-Shopify ו-WooCommerce");
           return;
         }
         if (parsed.products.length === 0) {
@@ -445,7 +445,7 @@ function StepPreview({
                 {preview.categoryHints.length > 5 &&
                   ` +${preview.categoryHints.length - 5}`}
               </span>
-              . בשלב זה כל המוצרים ישוייכו לקטגוריה אחת — תוכל לערוך אחר כך.
+              . בשלב זה כל המוצרים ישוייכו לקטגוריה אחת, תוכל לערוך אחר כך.
             </p>
           )}
         </div>
@@ -457,11 +457,11 @@ function StepPreview({
             onChange={onFallbackImageChange}
             purpose="import-fallback"
             aspect="square"
-            help={`${withoutImages} מוצרים בקובץ ללא תמונה. אם לא תעלה תמונה כאן — הם יידלגו.`}
+            help={`${withoutImages} מוצרים בקובץ ללא תמונה. אם לא תעלה תמונה כאן, הם יידלגו.`}
           />
         )}
 
-        {/* Image download toggle — critical for long-term reliability */}
+        {/* Image download toggle, critical for long-term reliability */}
         <label className="flex items-start gap-3 pt-2 border-t border-border cursor-pointer">
           <Checkbox
             checked={downloadImages}
@@ -478,8 +478,8 @@ function StepPreview({
             </div>
             <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
               {downloadImages
-                ? `כל תמונה תועתק ל-Vercel Blob שלך. הייבוא ייקח כ-1 שנייה לתמונה, אבל גם אם תסגור את החנות המקורית — התמונות יישארו זמינות באתר שלך.`
-                : `התמונות יישארו על השרת המקורי. הייבוא יהיה מהיר יותר, אבל אם החנות המקורית תיסגר — התמונות באתר שלך יישברו.`}
+                ? `כל תמונה תועתק ל-Vercel Blob שלך. הייבוא ייקח כ-1 שנייה לתמונה, אבל גם אם תסגור את החנות המקורית, התמונות יישארו זמינות באתר שלך.`
+                : `התמונות יישארו על השרת המקורי. הייבוא יהיה מהיר יותר, אבל אם החנות המקורית תיסגר, התמונות באתר שלך יישברו.`}
             </p>
           </div>
         </label>
@@ -489,7 +489,7 @@ function StepPreview({
             <Info className="size-4 text-brand-accent shrink-0 mt-0.5" />
             <div className="text-[11px] text-muted-foreground leading-relaxed">
               <strong className="text-foreground font-medium">דורש Vercel Blob.</strong>{" "}
-              ההורדה משתמשת בשירות אחסון של Vercel. אם לא הגדרת — ההורדה
+              ההורדה משתמשת בשירות אחסון של Vercel. אם לא הגדרת, ההורדה
               תידלג בשקט והתמונות יישארו עם ה-URL המקורי.
               <br />
               <span className="text-[10px]">
@@ -583,9 +583,9 @@ function StepPreview({
         <div className="flex gap-2.5">
           <Info className="size-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
           <div className="text-[11px] text-amber-900 dark:text-amber-200 leading-relaxed">
-            <strong className="font-medium">לפני שמתחילים — אל תסגור את החלון במהלך הייבוא.</strong>{" "}
+            <strong className="font-medium">לפני שמתחילים, אל תסגור את החלון במהלך הייבוא.</strong>{" "}
             הייבוא רץ מהדפדפן שלך ב-batches קטנים. אם תסגור את החלון
-            באמצע — הלולאה נעצרת, אבל{" "}
+            באמצע, הלולאה נעצרת, אבל{" "}
             <strong className="font-medium">המוצרים שכבר נשמרו נשארים בבסיס הנתונים.</strong>{" "}
             אם זה קורה, פשוט תעלה את אותו קובץ שוב: מוצרים עם מק״ט קיים
             מדולגים אוטומטית, והייבוא ימשיך מהמקום שעצר.

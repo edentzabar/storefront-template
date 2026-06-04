@@ -10,7 +10,7 @@ import { siteConfig } from "@/lib/site-config";
 export const announcement = `משלוח חינם בהזמנות מעל ₪${siteConfig.shop.freeShippingMin} ✦ החזרה תוך ${siteConfig.shop.returnDays} ימים ✦ תשלום עד ${siteConfig.shop.maxInstallments} תשלומים`;
 
 /**
- * Main nav. Replace with the client's real categories — the slugs
+ * Main nav. Replace with the client's real categories, the slugs
  * here must match the slugs in src/lib/data/categories.ts (and the
  * Category rows seeded in prisma/seed.ts).
  */
@@ -75,7 +75,7 @@ export const footer = {
   brandDescription:
     "תיאור קצר של המותג בפוטר. שורה-שתיים שמסכמות מה החנות עושה ולמי היא מיועדת.",
   /**
-   * Footer columns — edit to match the storefront's actual structure.
+   * Footer columns, edit to match the storefront's actual structure.
    * Contact column reads from siteConfig so brand-name swaps propagate.
    */
   columns: [

@@ -31,13 +31,13 @@ export function OrderStatusUpdater({
   return (
     <div className="space-y-3">
       <label className="block">
-        <span className="text-[0.78rem] tracking-[0.1em] uppercase text-brand-text-soft mb-1.5 block">
+        <span className="text-[0.78rem] tracking-[0.1em] uppercase text-muted-foreground mb-1.5 block">
           עדכן סטטוס
         </span>
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as OrderStatus)}
-          className="w-full px-4 py-2.5 border border-brand-border bg-white focus:outline-none focus:border-brand-primary text-sm"
+          className="w-full px-4 py-2.5 border border-border bg-background text-foreground focus:outline-none focus:border-foreground text-sm rounded-md"
         >
           {STATUSES.map((s) => (
             <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -47,7 +47,7 @@ export function OrderStatusUpdater({
       <button
         onClick={handleSave}
         disabled={!changed || pending}
-        className="w-full px-4 py-2.5 bg-brand-primary text-white text-[0.78rem] tracking-[0.15em] uppercase font-medium hover:bg-brand-primary-soft transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-4 py-2.5 bg-foreground text-background text-[0.78rem] tracking-[0.15em] uppercase font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-md"
       >
         {pending ? "מעדכן…" : "שמור"}
       </button>

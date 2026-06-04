@@ -7,6 +7,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "@/lib/stores/cart-store";
 import { formatPrice } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
+import { useShopSettings } from "@/components/site/shop-settings-provider";
 import { FreeShippingProgress } from "@/components/site/free-shipping-progress";
 
 export function CartView() {
@@ -14,6 +15,7 @@ export function CartView() {
   const total = useCart((s) => s.total());
   const remove = useCart((s) => s.remove);
   const changeQty = useCart((s) => s.changeQty);
+  const { freeShippingMin, warranty } = useShopSettings();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -36,9 +38,9 @@ export function CartView() {
   }
 
   const shippingNote =
-    total >= siteConfig.shop.freeShippingMin
+    total >= freeShippingMin
       ? "כולל משלוח חינם"
-      : `הוסיפו ₪${(siteConfig.shop.freeShippingMin - total).toLocaleString()} למשלוח חינם`;
+      : `הוסיפו ₪${(freeShippingMin - total).toLocaleString()} למשלוח חינם`;
 
   return (
     <div className="grid lg:grid-cols-[1.5fr_1fr] gap-10">
@@ -132,7 +134,7 @@ export function CartView() {
           המשך לקנייה
         </Link>
         <p className="text-[0.78rem] text-brand-text-soft text-center mt-4 leading-relaxed">
-          תשלום מאובטח · {siteConfig.shop.maxInstallments} תשלומים ללא ריבית · {siteConfig.shop.warranty}
+          תשלום מאובטח · {siteConfig.shop.maxInstallments} תשלומים ללא ריבית · {warranty}
         </p>
       </aside>
     </div>

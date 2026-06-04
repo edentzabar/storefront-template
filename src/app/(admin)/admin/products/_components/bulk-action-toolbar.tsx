@@ -276,7 +276,7 @@ function PriceModal({
 
   return (
     <ModalShell
-      title={`עריכת מחירים — ${products.length} מוצרים נבחרו`}
+      title={`עריכת מחירים, ${products.length} מוצרים נבחרו`}
       onClose={onClose}
     >
       <fieldset className="space-y-2.5 mb-4">
@@ -339,7 +339,7 @@ function PriceModal({
         onCancel={onClose}
         onConfirm={submit}
         disabled={!valid || pending}
-        confirmLabel={pending ? "מעדכן…" : `אישור — ${products.length} שינויים`}
+        confirmLabel={pending ? "מעדכן…" : `אישור, ${products.length} שינויים`}
       />
     </ModalShell>
   );
@@ -387,7 +387,7 @@ function StockModal({
 
   return (
     <ModalShell
-      title={`עדכון מלאי — ${products.length} מוצרים נבחרו`}
+      title={`עדכון מלאי, ${products.length} מוצרים נבחרו`}
       onClose={onClose}
     >
       <fieldset className="space-y-2.5 mb-4">
@@ -437,7 +437,7 @@ function StockModal({
         onCancel={onClose}
         onConfirm={submit}
         disabled={!valid || pending}
-        confirmLabel={pending ? "מעדכן…" : `אישור — ${products.length} שינויים`}
+        confirmLabel={pending ? "מעדכן…" : `אישור, ${products.length} שינויים`}
       />
     </ModalShell>
   );
@@ -476,7 +476,7 @@ function CategoryModal({
 
   return (
     <ModalShell
-      title={`העברה לקטגוריה — ${products.length} מוצרים`}
+      title={`העברה לקטגוריה, ${products.length} מוצרים`}
       onClose={onClose}
     >
       <label className="block mb-4">
@@ -513,7 +513,7 @@ function CategoryModal({
         onCancel={onClose}
         onConfirm={submit}
         disabled={!categoryId || pending}
-        confirmLabel={pending ? "מעביר…" : `אישור — ${products.length} מוצרים`}
+        confirmLabel={pending ? "מעביר…" : `אישור, ${products.length} מוצרים`}
       />
     </ModalShell>
   );

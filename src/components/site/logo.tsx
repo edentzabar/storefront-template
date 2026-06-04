@@ -7,6 +7,12 @@ type Props = {
   size?: "sm" | "md" | "lg";
   className?: string;
   asLink?: boolean;
+  /**
+   * Invert the logo for dark backgrounds (e.g. the footer). Applies a
+   * CSS filter that turns any dark logo into white. If the merchant
+   * uploaded a light/white logo already, leave this off.
+   */
+  invert?: boolean;
 };
 
 const sizeStyles: Record<NonNullable<Props["size"]>, { text: string; tagline: string; tracking: string; imageHeight: number }> = {
@@ -15,7 +21,7 @@ const sizeStyles: Record<NonNullable<Props["size"]>, { text: string; tagline: st
   lg: { text: "text-[2.2rem]", tagline: "text-[0.6rem]", tracking: "tracking-[0.32em]", imageHeight: 56 },
 };
 
-export async function Logo({ size = "md", className, asLink = true }: Props) {
+export async function Logo({ size = "md", className, asLink = true, invert = false }: Props) {
   const settings = await getSiteSettings();
   const s = sizeStyles[size];
 
@@ -25,7 +31,7 @@ export async function Logo({ size = "md", className, asLink = true }: Props) {
       alt={settings.brand.name}
       width={s.imageHeight * 4}
       height={s.imageHeight}
-      className={cn("object-contain", className)}
+      className={cn("object-contain", invert && "[filter:brightness(0)_invert(1)]", className)}
       style={{ height: s.imageHeight, width: "auto" }}
       unoptimized={settings.brand.logoUrl.startsWith("http") && !settings.brand.logoUrl.includes("vercel-storage.com")}
       priority

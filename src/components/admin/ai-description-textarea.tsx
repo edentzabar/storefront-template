@@ -59,9 +59,7 @@ export function AiDescriptionTextarea({
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <label className="text-xs uppercase tracking-wider text-muted-foreground">
-          {label}
-        </label>
+        <label className="text-sm font-medium text-foreground">{label}</label>
         <button
           type="button"
           onClick={generate}
@@ -82,10 +80,10 @@ export function AiDescriptionTextarea({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         rows={rows}
-        className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background"
+        className="w-full px-4 py-2.5 border border-border rounded-md text-base leading-relaxed bg-background focus:outline-none focus:border-foreground resize-y"
       />
-      {help && <p className="text-[11px] text-muted-foreground mt-1">{help}</p>}
-      {error && <p className="text-[11px] text-destructive mt-1">{error}</p>}
+      {help && <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{help}</p>}
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
     </div>
   );
 }

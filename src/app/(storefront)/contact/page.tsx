@@ -4,10 +4,10 @@ import { Breadcrumbs } from "@/components/site/breadcrumbs";
 import { PageHero } from "@/components/site/page-hero";
 import { ContactForm } from "./contact-form";
 import { getSiteSettings } from "@/lib/site-settings";
-import { contactContent } from "@/lib/data/static-pages";
+import { telHref } from "@/lib/format";
 
 export const metadata: Metadata = {
-  title: "צור קשר",
+  title: "יצירת קשר",
   description: "צרו קשר עם הצוות שלנו לכל שאלה או לקביעת פגישת ייעוץ.",
 };
 
@@ -15,20 +15,20 @@ export default async function ContactPage() {
   const settings = await getSiteSettings();
   return (
     <>
-      <Breadcrumbs items={[{ label: "בית", href: "/" }, { label: "צור קשר" }]} />
-      <PageHero title="צור קשר" eyebrow="Contact" />
+      <Breadcrumbs items={[{ label: "בית", href: "/" }, { label: "יצירת קשר" }]} />
+      <PageHero title="יצירת קשר" eyebrow="Contact" />
       <main className="py-14 px-6 lg:px-10">
         <div className="max-w-[1100px] mx-auto grid lg:grid-cols-[1fr_1.2fr] gap-12 lg:gap-16">
           <div>
             <p className="text-[0.98rem] leading-loose text-brand-text font-light mb-8">
-              {contactContent.intro}
+              {settings.contact.intro}
             </p>
             <ul className="space-y-5">
               <li className="flex gap-3">
                 <Phone className="w-5 h-5 text-brand-accent shrink-0 mt-1" strokeWidth={1.5} />
                 <div>
                   <div className="text-[0.78rem] tracking-[0.15em] uppercase text-brand-text-soft mb-1">טלפון</div>
-                  <a href={`tel:${settings.contact.phoneIntl}`} className="text-brand-primary hover:text-brand-accent">
+                  <a href={telHref(settings.contact.phone)} className="text-brand-primary hover:text-brand-accent">
                     {settings.contact.phone}
                   </a>
                 </div>
@@ -62,7 +62,7 @@ export default async function ContactPage() {
                 <Clock className="w-5 h-5 text-brand-accent shrink-0 mt-1" strokeWidth={1.5} />
                 <div>
                   <div className="text-[0.78rem] tracking-[0.15em] uppercase text-brand-text-soft mb-1">שעות פתיחה</div>
-                  <div className="text-brand-primary">{contactContent.studio.hours}</div>
+                  <div className="text-brand-primary">{settings.contact.hours}</div>
                 </div>
               </li>
             </ul>

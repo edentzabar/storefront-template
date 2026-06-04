@@ -19,7 +19,11 @@ export function LoginForm() {
     setError(null);
     const { error } = await signIn.email({ email, password });
     if (error) {
-      setError(error.message ?? "ההתחברות נכשלה. בדקו את הפרטים.");
+      // SECURITY: Always return the same message regardless of whether
+      // the email exists or the password was wrong. Different messages
+      // would let an attacker enumerate registered emails. Server-side
+      // log (better-auth) still records the true reason.
+      setError("פרטי ההתחברות שגויים");
       setBusy(false);
       return;
     }

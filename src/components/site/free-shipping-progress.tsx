@@ -1,14 +1,16 @@
 "use client";
 
 import { useCart } from "@/lib/stores/cart-store";
-import { siteConfig } from "@/lib/site-config";
+import { useShopSettings } from "@/components/site/shop-settings-provider";
 import { formatPrice } from "@/lib/format";
 
 /**
  * Free-shipping progress bar shown above the cart items (both in the
- * drawer and on the full /cart page). Reads the threshold from
- * siteConfig.shop.freeShippingMin so per-client overrides flow
- * automatically. Hidden entirely when the threshold is 0 / falsy.
+ * drawer and on the full /cart page). Reads the threshold from the
+ * shop-settings context, which is populated from /admin/settings —
+ * so when the merchant edits "משלוח חינם מעל", this bar updates
+ * automatically (cache invalidates on save). Hidden entirely when
+ * the threshold is 0 / falsy.
  *
  * A small detail that lifts AOV significantly in the field — shoppers
  * naturally bump their cart over the line to unlock free shipping.
@@ -16,9 +18,8 @@ import { formatPrice } from "@/lib/format";
 export function FreeShippingProgress() {
   const items = useCart((s) => s.items);
   const hydrated = useCart((s) => s.hydrated);
+  const { freeShippingMin: threshold } = useShopSettings();
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
-
-  const threshold = siteConfig.shop.freeShippingMin;
   if (!threshold || threshold <= 0) return null;
 
   // Avoid SSR/CSR mismatch — show neutral state until hydrated.

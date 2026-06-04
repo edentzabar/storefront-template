@@ -27,10 +27,15 @@ export function RegisterForm() {
       phone,
     } as Parameters<typeof signUp.email>[0]);
     if (error) {
-      setError(error.message ?? "ההרשמה נכשלה. נסו שוב.");
+      // SECURITY: Don't echo the raw error — could expose whether the
+      // email is already registered (account enumeration). Keep the
+      // detail in the server log; show a generic message here.
+      setError("יצירת החשבון נכשלה. בדקי שכל הפרטים תקינים.");
       setBusy(false);
       return;
     }
+    // Email verification is disabled — better-auth auto-signs the
+    // new user in (`autoSignIn: true`), so we go straight to /account.
     toast.success("החשבון נוצר בהצלחה");
     router.push("/account");
     router.refresh();
@@ -74,12 +79,12 @@ export function RegisterForm() {
       </label>
       <label className="block">
         <span className="text-[0.78rem] tracking-[0.1em] uppercase text-brand-text-soft mb-1.5 block">
-          סיסמה <span className="text-brand-text-soft normal-case tracking-normal">(לפחות 6 תווים)</span>
+          סיסמה <span className="text-brand-text-soft normal-case tracking-normal">(לפחות 12 תווים)</span>
         </span>
         <input
           type="password"
           required
-          minLength={6}
+          minLength={12}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full px-4 py-3 border border-brand-border bg-white focus:outline-none focus:border-brand-primary"

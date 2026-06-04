@@ -59,13 +59,13 @@ export function AddToCartButton({
       return;
     }
     setBusy(true);
-    // Add immediately — the cart-count badge ticks up while the clone
+    // Add immediately, the cart-count badge ticks up while the clone
     // is still mid-flight, which makes the landing feel like cause +
     // effect ("I see it arriving AND I see the counter go up").
     add(product, qty, size);
     toast.success(`${product.name} נוסף לעגלה`);
     // Wait for the fly to land before opening the drawer. Without
-    // this, mobile users never see the animation — the drawer slides
+    // this, mobile users never see the animation, the drawer slides
     // over it within the first frame.
     await flyToCart(flySource?.current ?? selfRef.current);
     if (openCart) setOpen(true);

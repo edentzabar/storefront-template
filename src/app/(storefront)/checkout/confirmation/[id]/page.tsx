@@ -12,11 +12,17 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type Params = { params: Promise<{ id: string }> };
+type Params = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ t?: string }>;
+};
 
-export default async function ConfirmationPage({ params }: Params) {
-  const { id } = await params;
-  const order = await getOrderForCustomer(id);
+export default async function ConfirmationPage({ params, searchParams }: Params) {
+  const [{ id }, { t }] = await Promise.all([params, searchParams]);
+  // SECURITY: pass through the per-order access token so guest
+  // checkouts can view their confirmation; logged-in customers and
+  // admin see it via the auth check inside getOrderForCustomer().
+  const order = await getOrderForCustomer(id, t ?? null);
 
   return (
     <>

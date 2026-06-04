@@ -46,7 +46,9 @@ export function CategoriesGrid({ categories }: { categories: CategoryView[] }) {
                   {cat.name}
                 </h3>
                 <span className="inline-flex items-center gap-2 text-[0.72rem] tracking-[0.3em] text-brand-accent-light uppercase">
-                  {cat.cta}
+                  {/* Fallback when the merchant hasn't set a per-category CTA.
+                      Generic "לקטגוריה" works for every vertical. */}
+                  {cat.cta || "לקטגוריה"}
                   <ArrowLeft className="w-3.5 h-3.5 transition-transform duration-300 group-hover:-translate-x-1" />
                 </span>
               </div>

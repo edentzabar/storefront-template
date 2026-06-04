@@ -111,7 +111,6 @@ export function ProductsTable({
               <th className="px-4 py-3 text-right font-medium hidden md:table-cell">קטגוריה</th>
               <th className="px-4 py-3 text-right font-medium">מחיר</th>
               <th className="px-4 py-3 text-right font-medium hidden sm:table-cell">מלאי</th>
-              <th className="px-4 py-3 text-right font-medium hidden lg:table-cell">SKU</th>
               <th className="px-4 py-3 text-right font-medium">סטטוס</th>
               <th className="px-4 py-3 text-left font-medium w-24">פעולות</th>
             </tr>
@@ -189,9 +188,6 @@ export function ProductsTable({
                     {p.stock}
                   </span>
                 </td>
-                <td className="px-4 py-3 align-middle hidden lg:table-cell text-[11px] text-muted-foreground font-mono">
-                  {p.sku}
-                </td>
                 <td className="px-4 py-3 align-middle">
                   <div className="flex items-center gap-1">
                     <button
@@ -199,7 +195,7 @@ export function ProductsTable({
                         startTransition(() => toggleProductActive(p.id, !p.isActive))
                       }
                       disabled={pending}
-                      title={p.isActive ? "פעיל — לחץ להסתרה" : "מוסתר — לחץ להפעלה"}
+                      title={p.isActive ? "פעיל, לחץ להסתרה" : "מוסתר, לחץ להפעלה"}
                       className={cn(
                         "inline-flex items-center justify-center size-7 rounded-md transition-colors",
                         p.isActive

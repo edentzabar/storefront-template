@@ -236,6 +236,37 @@ export function orderStatusEmail(order: OrderWithItems) {
   };
 }
 
+/**
+ * Sent by better-auth on signup. The link inside hits
+ * /api/auth/verify-email and flips emailVerified to true. The user
+ * cannot log in until they click it (requireEmailVerification: true).
+ */
+export function verifyEmailTemplate(opts: { name: string; url: string }) {
+  const body = `
+    <p style="margin:0 0 16px 0;font-size:16px;color:${PALETTE.primary};">שלום ${escapeHtml(opts.name)},</p>
+    <p style="margin:0 0 20px 0;font-size:14px;color:${PALETTE.text};line-height:1.7;">
+      תודה שנרשמת ל-${escapeHtml(siteConfig.name)}. כדי להפעיל את החשבון, יש לאמת את כתובת האימייל בלחיצה על הכפתור למטה:
+    </p>
+    <p style="margin:0 0 28px 0;text-align:center;">
+      <a
+        href="${opts.url}"
+        style="display:inline-block;padding:14px 28px;background:${PALETTE.primary};color:#ffffff;font-size:13px;letter-spacing:0.18em;text-transform:uppercase;text-decoration:none;font-weight:500;"
+      >אמת אימייל</a>
+    </p>
+    <p style="margin:0 0 12px 0;font-size:12px;color:${PALETTE.textSoft};line-height:1.6;">
+      הקישור תקף ל-24 שעות. אם לא ביקשת לפתוח חשבון, אפשר להתעלם מהמייל.
+    </p>
+    <p style="margin:0;font-size:11px;color:${PALETTE.textSoft};word-break:break-all;">
+      אם הכפתור לא עובד, העתיקי את הקישור:<br/>
+      <span style="color:${PALETTE.accentDark};">${escapeHtml(opts.url)}</span>
+    </p>
+  `;
+  return {
+    subject: `${siteConfig.name} · אימות חשבון`,
+    html: wrap({ previewText: "אימות אימייל חד פעמי", bodyHtml: body }),
+  };
+}
+
 function escapeHtml(s: string) {
   return s
     .replace(/&/g, "&amp;")

@@ -77,14 +77,14 @@ export function ChatbotWidget({ welcomeMessage, position }: Props) {
           ...h,
           {
             role: "assistant",
-            content: result.message || "סליחה, יש לי בעיה כרגע — נסי שוב עוד רגע.",
+            content: result.message || "סליחה, יש לי בעיה כרגע, נסי שוב עוד רגע.",
           },
         ]);
       }
     } catch {
       setHistory((h) => [
         ...h,
-        { role: "assistant", content: "סליחה, יש לי בעיה כרגע — נסי שוב עוד רגע." },
+        { role: "assistant", content: "סליחה, יש לי בעיה כרגע, נסי שוב עוד רגע." },
       ]);
     } finally {
       setBusy(false);

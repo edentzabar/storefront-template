@@ -12,6 +12,8 @@ import {
   getRecentOrders,
   getLowStockProducts,
   getTopProducts,
+  getTopCustomers,
+  getSalesByCategory,
   rangeFromIso,
   rangeFromWindow,
 } from "@/lib/admin-queries";
@@ -20,6 +22,8 @@ import { RevenueChart, Sparkline } from "@/components/admin/dashboard/revenue-ch
 import { RecentOrders } from "@/components/admin/dashboard/recent-orders";
 import { LowStockList } from "@/components/admin/dashboard/low-stock-list";
 import { TopProducts } from "@/components/admin/dashboard/top-products";
+import { TopCustomersList } from "@/components/admin/dashboard/top-customers";
+import { SalesByCategoryList } from "@/components/admin/dashboard/sales-by-category";
 import { DashboardRange } from "./_components/dashboard-range";
 
 export const metadata: Metadata = {
@@ -50,12 +54,22 @@ export default async function AdminDashboard({
   const range = custom ?? rangeFromWindow(windowDays!);
   const totalDays = differenceInCalendarDays(range.to, range.from) + 1;
 
-  const [kpis, timeseries, recentOrders, lowStock, topProducts] = await Promise.all([
+  const [
+    kpis,
+    timeseries,
+    recentOrders,
+    lowStock,
+    topProducts,
+    topCustomers,
+    salesByCategory,
+  ] = await Promise.all([
     getKpis(range),
     getRevenueTimeseries(range),
     getRecentOrders(8),
     getLowStockProducts(5, 6),
     getTopProducts(5, range),
+    getTopCustomers(range, 5),
+    getSalesByCategory(range),
   ]);
 
   const revenueSpark = timeseries.map((t) => t.revenue);
@@ -125,9 +139,15 @@ export default async function AdminDashboard({
         <TopProducts products={topProducts} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <TopCustomersList customers={topCustomers} />
         <LowStockList products={lowStock} />
       </div>
+
+      {/* Sales by category — full-width bar breakdown. Useful at a glance
+          to see which categories pull weight; full reports page would
+          have shown more depth but the breakdown is the key signal. */}
+      <SalesByCategoryList categories={salesByCategory} />
     </div>
   );
 }

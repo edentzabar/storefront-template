@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getSiteSettings } from "@/lib/site-settings";
 import { getProvider, type ChatMessage } from "./provider";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, getClientIp, POLICIES } from "@/lib/rate-limit";
 
 /**
  * Chatbot turn — caller passes the full history (or a recent slice)
@@ -43,6 +44,21 @@ export async function chatbotReply(input: z.infer<typeof inputSchema>): Promise<
     return { ok: false, reason: "error", message: "פנייה לא תקינה" };
   }
 
+  // SECURITY: Rate-limit before touching the AI provider. Two layers:
+  //   • Per-minute spike cap (10/min/IP)
+  //   • Daily cap (80/day/IP) on top of that
+  // Both must be checked before the LLM call, otherwise an attacker
+  // can burn the API key with a single 10-second burst.
+  const ip = await getClientIp();
+  const minute = await rateLimit(`chatbot:m:${ip}`, POLICIES.chatbot);
+  if (!minute.ok) {
+    return { ok: false, reason: "error", message: "יותר מדי בקשות, חכי רגע ותנסי שוב" };
+  }
+  const daily = await rateLimit(`chatbot:d:${ip}`, POLICIES.chatbotDaily);
+  if (!daily.ok) {
+    return { ok: false, reason: "error", message: "הגעת למכסת השאלות היומית, ננסה מחר" };
+  }
+
   const settings = await getSiteSettings();
   if (!settings.chatbot.enabled) {
     return { ok: false, reason: "disabled", message: "הצ'אטבוט כבוי" };
@@ -80,10 +96,15 @@ export async function chatbotReply(input: z.infer<typeof inputSchema>): Promise<
     const text = await provider.text(messages, { maxTokens: 400 });
     return { ok: true, text: text.trim() };
   } catch (err) {
+    // SECURITY: Do NOT echo the provider's error message to the
+    // client. It can leak the model name, request id, sometimes
+    // even a partial key in misconfigured proxies. Log the real
+    // error server-side; return a generic message to the user.
+    console.error("[chatbot] provider call failed:", err);
     return {
       ok: false,
       reason: "error",
-      message: err instanceof Error ? err.message : "שגיאה",
+      message: "שגיאה בתקשורת. נסי שוב.",
     };
   }
 }

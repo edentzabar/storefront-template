@@ -6,6 +6,7 @@ import { Plus, X, GripVertical } from "lucide-react";
 import type { Category } from "@prisma/client";
 import type { CategoryFormState } from "@/lib/admin/categories-actions";
 import { cn } from "@/lib/utils";
+import { hebrewToSlug } from "@/lib/hebrew-slug";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import {
   DndContext,
@@ -56,17 +57,6 @@ type Props = {
 
 const initialState: CategoryFormState = { ok: false };
 
-/** Turn an English string into a URL-safe slug. */
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 export function CategoryForm({
   category,
   existingChildren = [],
@@ -76,7 +66,10 @@ export function CategoryForm({
   const [state, formAction, pending] = useActionState(action, initialState);
 
   const [image, setImage] = useState(category?.image ?? "");
-  const [nameEn, setNameEn] = useState(category?.nameEn ?? "");
+  // Single Hebrew name input. Slug + nameEn are derived from it via
+  // hebrewToSlug() and sent as hidden inputs. For existing categories
+  // we keep the saved slug so URLs survive renames.
+  const [name, setName] = useState(category?.name ?? "");
   const [slug, setSlug] = useState(category?.slug ?? "");
   // True if we're editing an existing SUBcategory. Subcategories can't
   // themselves contain subcategories, so the children editor is hidden.
@@ -112,25 +105,13 @@ export function CategoryForm({
       return arrayMove(rows, oldIndex, newIndex);
     });
   }
-  // Treat existing categories as having a manually-set slug. For new ones,
-  // auto-update slug from nameEn until the user types in the slug field.
-  const [slugManuallyEdited, setSlugManuallyEdited] = useState(Boolean(category));
-
-  function handleNameEnChange(value: string) {
-    setNameEn(value);
-    if (!slugManuallyEdited) {
-      setSlug(slugify(value));
-    }
-  }
-
-  function handleSlugChange(value: string) {
-    setSlug(value);
-    // If user clears the slug, resume auto-generation from nameEn.
-    if (value === "") {
-      setSlugManuallyEdited(false);
-      setSlug(slugify(nameEn));
-    } else {
-      setSlugManuallyEdited(true);
+  function handleNameChange(value: string) {
+    setName(value);
+    // New categories: regenerate slug as the merchant types.
+    // Existing categories: preserve the saved slug so existing URLs
+    // don't break on rename.
+    if (!category) {
+      setSlug(hebrewToSlug(value));
     }
   }
 
@@ -151,12 +132,14 @@ export function CategoryForm({
       rows.map((r) => {
         if (r._key !== key) return r;
         const next = { ...r, ...patch };
-        if (patch.nameEn !== undefined && !next.slugManuallyEdited) {
-          next.slug = slugify(patch.nameEn);
-        }
-        if (patch.slug !== undefined) {
-          next.slugManuallyEdited = patch.slug !== "";
-          if (patch.slug === "") next.slug = slugify(next.nameEn);
+        // The child only edits Hebrew name. We auto-derive both
+        // nameEn (= same Hebrew name as a fallback) and slug.
+        if (patch.name !== undefined) {
+          next.nameEn = patch.name;
+          if (!r.id) {
+            // Existing children keep their saved slug to avoid URL churn.
+            next.slug = hebrewToSlug(patch.name);
+          }
         }
         return next;
       }),
@@ -187,54 +170,33 @@ export function CategoryForm({
         </div>
       )}
 
-      <Section title="זיהוי">
-        <Grid>
-          <ControlledField
-            label="שם בעברית"
-            name="name"
-            defaultValue={category?.name ?? ""}
-            required
-            error={state.fieldErrors?.name}
-            help="כפי שיוצג ללקוחות באתר"
-          />
-          <ControlledField
-            label="שם באנגלית"
-            name="nameEn"
-            value={nameEn}
-            onChange={handleNameEnChange}
-            required
-            error={state.fieldErrors?.nameEn}
-            help="מופיע בכותרת דף הקטגוריה כתת-כותרת, וב-SEO. גם משמש לחיפוש."
-          />
-        </Grid>
+      <Section title="פרטי הקטגוריה">
         <ControlledField
-          label="Slug (כתובת בURL)"
-          name="slug"
-          value={slug}
-          onChange={handleSlugChange}
+          label="שם הקטגוריה"
+          name="name"
+          value={name}
+          onChange={handleNameChange}
           required
-          error={state.fieldErrors?.slug}
-          help={
-            slugManuallyEdited
-              ? `הקטגוריה תהיה זמינה ב-/category/${slug || "..."} · נקה לחזרה לאוטומטי`
-              : `מתעדכן אוטומטית מהשם באנגלית. הקטגוריה תהיה ב-/category/${slug || "..."}`
-          }
-          dir="ltr"
+          error={state.fieldErrors?.name}
+          help="כפי שיוצג ללקוחות באתר. הכתובת באנגלית נכתבת אוטומטית."
         />
-      </Section>
+        {/* Hidden fields the server still needs. nameEn falls back to
+            the Hebrew name when AI translation is not configured;
+            slug is the transliterated form so URLs remain stable. */}
+        <input type="hidden" name="nameEn" value={name} />
+        <input type="hidden" name="slug" value={slug} />
+        {/* Empty defaults for fields removed from the UI. The server
+            schema treats them as optional. */}
+        <input type="hidden" name="cta" value={category?.cta ?? ""} />
+        <input type="hidden" name="seoTitle" value={category?.seoTitle ?? ""} />
+        <input type="hidden" name="seoDescription" value={category?.seoDescription ?? ""} />
 
-      <Section title="תוכן">
-        <ControlledField
-          label="טקסט CTA"
-          name="cta"
-          defaultValue={category?.cta ?? ""}
-          help='למשל: "גלו את הקולקציה"'
-        />
         <TextareaField
           label="תיאור"
           name="description"
           defaultValue={category?.description ?? ""}
           rows={3}
+          help="מופיע בכותרת דף הקטגוריה ובתוצאות חיפוש."
         />
         <ImageUploadField
           label="תמונת נושא"
@@ -244,22 +206,6 @@ export function CategoryForm({
           purpose={`category-${category?.id ?? "new"}`}
           aspect="wide"
           help="התמונה תוצג בכרטיס הקטגוריה בדף הבית. מומלץ 800×1000 לפחות."
-        />
-      </Section>
-
-      <Section title="SEO">
-        <ControlledField
-          label="כותרת SEO"
-          name="seoTitle"
-          defaultValue={category?.seoTitle ?? ""}
-          help="ל-meta title (אם ריק — ייעשה שימוש בשם הקטגוריה)"
-        />
-        <TextareaField
-          label="תיאור SEO"
-          name="seoDescription"
-          defaultValue={category?.seoDescription ?? ""}
-          rows={2}
-          help="ל-meta description (לתצוגה בתוצאות חיפוש)"
         />
       </Section>
 
@@ -396,7 +342,7 @@ function ControlledField({
   const controlled = value !== undefined && onChange !== undefined;
   return (
     <label className="block">
-      <span className="text-[0.78rem] tracking-[0.1em] uppercase text-muted-foreground mb-1.5 block">
+      <span className="text-sm font-medium text-foreground mb-1.5 block">
         {label}
         {required && <span className="text-destructive mr-1">*</span>}
       </span>
@@ -410,7 +356,7 @@ function ControlledField({
         required={required}
         disabled={disabled}
         className={cn(
-          "w-full px-4 py-2.5 border bg-background focus:outline-none focus:border-foreground text-sm rounded-md",
+          "w-full px-4 py-2.5 border bg-background focus:outline-none focus:border-foreground text-base rounded-md",
           error ? "border-destructive" : "border-border",
           disabled && "bg-muted text-muted-foreground",
         )}
@@ -418,7 +364,7 @@ function ControlledField({
       {(error || help) && (
         <span
           className={cn(
-            "text-[11px] mt-1 block",
+            "text-xs mt-1 block leading-relaxed",
             error ? "text-destructive" : "text-muted-foreground",
           )}
         >
@@ -444,17 +390,17 @@ function TextareaField({
 }) {
   return (
     <label className="block">
-      <span className="text-[0.78rem] tracking-[0.1em] uppercase text-muted-foreground mb-1.5 block">
+      <span className="text-sm font-medium text-foreground mb-1.5 block">
         {label}
       </span>
       <textarea
         name={name}
         defaultValue={defaultValue}
         rows={rows}
-        className="w-full px-4 py-2.5 border border-border bg-background focus:outline-none focus:border-foreground text-sm resize-y leading-relaxed rounded-md"
+        className="w-full px-4 py-2.5 border border-border bg-background focus:outline-none focus:border-foreground text-base resize-y leading-relaxed rounded-md"
       />
       {help && (
-        <span className="text-[11px] text-muted-foreground mt-1 block">{help}</span>
+        <span className="text-xs text-muted-foreground mt-1 block leading-relaxed">{help}</span>
       )}
     </label>
   );
@@ -521,7 +467,7 @@ function SortableChildRow({
         opacity: isDragging ? 0.5 : 1,
       }}
       className={cn(
-        "grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 items-end p-3 bg-muted/30 border border-border rounded-md",
+        "grid grid-cols-[auto_1fr_auto] gap-2 items-end p-3 bg-muted/30 border border-border rounded-md",
         isDragging && "shadow-lg ring-2 ring-brand-accent/40 bg-card",
       )}
     >
@@ -536,22 +482,9 @@ function SortableChildRow({
         <GripVertical className="size-4" />
       </button>
       <ChildField
-        label="שם בעברית"
+        label="שם תת הקטגוריה"
         value={child.name}
         onChange={(v) => onChange({ name: v })}
-        required
-      />
-      <ChildField
-        label="שם באנגלית"
-        value={child.nameEn}
-        onChange={(v) => onChange({ nameEn: v })}
-        required
-      />
-      <ChildField
-        label="Slug"
-        value={child.slug}
-        onChange={(v) => onChange({ slug: v })}
-        dir="ltr"
         required
       />
       <button

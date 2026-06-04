@@ -36,7 +36,7 @@ export default async function OrderDetailPage({ params }: Params) {
   return (
     <div className="p-8">
       <div className="mb-2 text-sm flex items-center justify-between gap-3">
-        <Link href="/admin/orders" className="text-brand-text-soft hover:text-brand-accent inline-flex items-center gap-1">
+        <Link href="/admin/orders" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
           <ChevronRight className="w-3.5 h-3.5 rotate-180" />
           חזרה לרשימת הזמנות
         </Link>
@@ -62,24 +62,24 @@ export default async function OrderDetailPage({ params }: Params) {
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
         {/* items */}
-        <div className="bg-white border border-brand-border p-6">
-          <h2 className="font-body text-lg font-medium text-brand-primary mb-4 pb-3 border-b border-brand-border">
+        <div className="bg-card border border-border rounded-lg p-6">
+          <h2 className="font-body text-lg font-medium text-foreground mb-4 pb-3 border-b border-border">
             פריטים
           </h2>
           <ul className="space-y-4">
             {order.items.map((item) => (
-              <li key={item.id} className="flex gap-4 pb-4 border-b border-brand-border last:border-0">
+              <li key={item.id} className="flex gap-4 pb-4 border-b border-border last:border-0">
                 <div className="relative w-16 h-20 flex-shrink-0 overflow-hidden bg-brand-bg-soft">
                   {item.image && (
                     <Image src={item.image} alt={item.name} fill sizes="64px" className="object-cover" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-brand-primary">{item.name}</div>
+                  <div className="font-medium text-foreground">{item.name}</div>
                   {item.size && (
-                    <div className="text-xs text-brand-text-soft mt-1">מידה: {item.size}</div>
+                    <div className="text-xs text-muted-foreground mt-1">מידה: {item.size}</div>
                   )}
-                  <div className="text-sm text-brand-text-soft mt-1">
+                  <div className="text-sm text-muted-foreground mt-1">
                     {formatPrice(item.price)} × {item.qty}
                   </div>
                 </div>
@@ -90,16 +90,16 @@ export default async function OrderDetailPage({ params }: Params) {
             ))}
           </ul>
 
-          <div className="mt-5 pt-5 border-t border-brand-border space-y-2 text-sm">
-            <div className="flex justify-between text-brand-text-soft">
+          <div className="mt-5 pt-5 border-t border-border space-y-2 text-sm">
+            <div className="flex justify-between text-muted-foreground">
               <span>סכום ביניים</span>
               <span>{formatPrice(order.subtotal)}</span>
             </div>
-            <div className="flex justify-between text-brand-text-soft">
+            <div className="flex justify-between text-muted-foreground">
               <span>משלוח</span>
               <span>{order.shippingCost === 0 ? "חינם" : formatPrice(order.shippingCost)}</span>
             </div>
-            <div className="flex justify-between font-medium pt-2 mt-2 border-t border-brand-border text-base">
+            <div className="flex justify-between font-medium pt-2 mt-2 border-t border-border text-base">
               <span>סה"כ</span>
               <span className="text-xl font-semibold tabular-nums">{formatPrice(order.total)}</span>
             </div>
@@ -108,8 +108,8 @@ export default async function OrderDetailPage({ params }: Params) {
 
         {/* details + status */}
         <div className="space-y-6">
-          <div className="bg-white border border-brand-border p-6">
-            <h2 className="font-body text-lg font-medium text-brand-primary mb-4 pb-3 border-b border-brand-border">
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="font-body text-lg font-medium text-foreground mb-4 pb-3 border-b border-border">
               סטטוס
             </h2>
             <div className="mb-4">
@@ -118,7 +118,7 @@ export default async function OrderDetailPage({ params }: Params) {
               </span>
             </div>
             <OrderStatusUpdater orderId={order.id} currentStatus={order.status} />
-            <div className="mt-5 pt-5 border-t border-brand-border">
+            <div className="mt-5 pt-5 border-t border-border">
               <OrderTrackingEditor
                 orderId={order.id}
                 initialTracking={order.trackingNumber}
@@ -126,8 +126,8 @@ export default async function OrderDetailPage({ params }: Params) {
             </div>
           </div>
 
-          <div className="bg-white border border-brand-border p-6">
-            <h2 className="font-body text-lg font-medium text-brand-primary mb-4 pb-3 border-b border-brand-border">
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="font-body text-lg font-medium text-foreground mb-4 pb-3 border-b border-border">
               הערות פנימיות
             </h2>
             <OrderInternalNotesEditor
@@ -136,8 +136,8 @@ export default async function OrderDetailPage({ params }: Params) {
             />
           </div>
 
-          <div className="bg-white border border-brand-border p-6">
-            <h2 className="font-body text-lg font-medium text-brand-primary mb-4 pb-3 border-b border-brand-border">
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="font-body text-lg font-medium text-foreground mb-4 pb-3 border-b border-border">
               לקוח
             </h2>
             <dl className="space-y-2.5 text-sm">
@@ -147,8 +147,8 @@ export default async function OrderDetailPage({ params }: Params) {
             </dl>
           </div>
 
-          <div className="bg-white border border-brand-border p-6">
-            <h2 className="font-body text-lg font-medium text-brand-primary mb-4 pb-3 border-b border-brand-border">
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="font-body text-lg font-medium text-foreground mb-4 pb-3 border-b border-border">
               משלוח
             </h2>
             <dl className="space-y-2.5 text-sm">
@@ -160,8 +160,8 @@ export default async function OrderDetailPage({ params }: Params) {
             </dl>
           </div>
 
-          <div className="bg-white border border-brand-border p-6">
-            <h2 className="font-body text-lg font-medium text-brand-primary mb-4 pb-3 border-b border-brand-border">
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="font-body text-lg font-medium text-foreground mb-4 pb-3 border-b border-border">
               תשלום
             </h2>
             <dl className="space-y-2.5 text-sm">
@@ -179,8 +179,8 @@ export default async function OrderDetailPage({ params }: Params) {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between gap-3">
-      <dt className="text-brand-text-soft">{label}</dt>
-      <dd className="text-brand-primary text-left">{value}</dd>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="text-foreground text-left">{value}</dd>
     </div>
   );
 }

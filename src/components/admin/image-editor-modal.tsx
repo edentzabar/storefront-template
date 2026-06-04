@@ -59,7 +59,7 @@ const ASPECTS: { key: AspectKey; label: string; value: number | undefined }[] = 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** The source image — either a freshly-picked File or an existing URL. */
+  /** The source image, either a freshly-picked File or an existing URL. */
   source: File | string | null;
   /** Called with the edited blob when the user clicks Save. */
   onSave: (edited: Blob) => void;
@@ -171,7 +171,7 @@ export function ImageEditorModal({
     if (!imgSrc) return;
     setBusy("bg");
     const t = toast.loading(
-      "מסיר רקע… (פעם ראשונה לוקח דקה — המודל נטען לדפדפן ויישמר בקאש להמשך)",
+      "מסיר רקע… (פעם ראשונה לוקח דקה, המודל נטען לדפדפן ויישמר בקאש להמשך)",
     );
     try {
       // Fully permissive stack:
@@ -274,7 +274,7 @@ export function ImageEditorModal({
           <div>
             <DialogTitle className="text-lg font-semibold">עריכת תמונה</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              חיתוך, סיבוב, הסרת רקע ועריכת צבעים — הכל בתוך הדפדפן.
+              חיתוך, סיבוב, הסרת רקע ועריכת צבעים, הכל בתוך הדפדפן.
             </DialogDescription>
           </div>
           <Button
@@ -289,7 +289,7 @@ export function ImageEditorModal({
         </div>
 
         <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-[1fr_320px] min-h-0">
-          {/* Canvas / preview — fills all remaining vertical space; the
+          {/* Canvas / preview, fills all remaining vertical space; the
               image inside is constrained to max-w-full max-h-full so
               ReactCrop sizes its overlay to the displayed dimensions.
               Checkered bg makes transparency visible after bg removal. */}
@@ -326,7 +326,7 @@ export function ImageEditorModal({
                     style={{
                       transform: `rotate(${rotation}deg)`,
                       filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`,
-                      // Fill the canvas area without forcing scroll —
+                      // Fill the canvas area without forcing scroll ,
                       // the image scales down to fit both the modal's
                       // available width AND height. The 14rem accounts
                       // for the topbar (≈80px), footer (≈80px) and
@@ -577,7 +577,7 @@ function SliderRow({
         </span>
         <span className="tabular-nums text-foreground">{value}%</span>
       </div>
-      {/* Native range — styled minimally to fit the admin chrome.
+      {/* Native range, styled minimally to fit the admin chrome.
           Avoids pulling in a slider library when one slider suffices. */}
       <input
         type="range"

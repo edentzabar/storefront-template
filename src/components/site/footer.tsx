@@ -11,7 +11,7 @@ export async function Footer() {
       <div className="max-w-[1400px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-white/10">
           <div className="md:col-span-2 lg:col-span-1">
-            <Logo size="md" />
+            <Logo size="md" invert />
             <p className="mt-5 text-[0.92rem] leading-relaxed font-light text-white/75 max-w-sm">
               {footer.brandDescription}
             </p>

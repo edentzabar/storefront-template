@@ -9,7 +9,6 @@ import { computeSegments } from "@/lib/admin/customer-segments";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { RoleSelector } from "./_components/role-selector";
 import { CustomerTimeline } from "./_components/customer-timeline";
 import { ManualTags } from "./_components/manual-tags";
 import { InternalNotes } from "./_components/internal-notes";
@@ -218,7 +217,16 @@ export default async function CustomerDetailPage({ params }: Params) {
 
           <div className="bg-card border border-border rounded-lg p-5">
             <h2 className="text-sm font-medium text-foreground mb-3">תפקיד</h2>
-            <RoleSelector userId={user.id} currentRole={user.role} />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted text-sm">
+              {user.role === "admin" ? (
+                <span className="font-medium text-brand-accent">מנהל חנות</span>
+              ) : (
+                <span className="font-medium text-foreground">לקוח</span>
+              )}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
+              קידום מנהלים אפשרי רק דרך הטרמינל של הבעלים: pnpm db:make-admin {"<אימייל>"}
+            </p>
           </div>
 
           <div className="bg-card border border-border rounded-lg p-5">

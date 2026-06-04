@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/session";
 import { sendEmail } from "@/lib/email/client";
 import { orderStatusEmail } from "@/lib/email/templates";
+import { audit } from "@/lib/audit";
 
 function invalidateOrderCaches() {
   updateTag("orders");
@@ -52,9 +53,17 @@ export async function updateOrderStatus(orderId: string, status: string) {
   await assertAdmin();
   const parsed = statusSchema.safeParse(status);
   if (!parsed.success) return { ok: false, error: "סטטוס לא חוקי" };
+  const before = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { status: true },
+  });
   await prisma.order.update({
     where: { id: orderId },
     data: { status: parsed.data },
+  });
+  await audit("order:status:update", "order", orderId, {
+    before: before ? { status: before.status } : null,
+    after: { status: parsed.data },
   });
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${orderId}`);
@@ -94,11 +103,16 @@ export async function updateOrderInternalNotes(orderId: string, notes: string | 
 
 export async function deleteOrder(orderId: string) {
   await assertAdmin();
+  const before = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, status: true, total: true, customerEmail: true },
+  });
   try {
     await prisma.order.delete({ where: { id: orderId } });
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "שגיאה במחיקה" };
   }
+  await audit("order:delete", "order", orderId, { before });
   revalidatePath("/admin/orders");
   invalidateOrderCaches();
   return { ok: true };

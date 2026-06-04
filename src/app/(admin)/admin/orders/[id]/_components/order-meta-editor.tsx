@@ -82,7 +82,7 @@ export function OrderInternalNotesEditor({
       <Textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="הערות פנימיות לצוות — אריזה מיוחדת, הערה ללקוח, וכו'."
+        placeholder="הערות פנימיות לצוות, אריזה מיוחדת, הערה ללקוח, וכו'."
         className="min-h-[90px] text-sm resize-none"
         maxLength={4000}
       />

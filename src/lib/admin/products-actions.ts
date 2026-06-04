@@ -6,26 +6,28 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/session";
 
+// SECURITY: Every string field gets a hard .max() to prevent unbounded
+// writes that could bloat the DB or hit Postgres column limits awkwardly.
 const productSchema = z.object({
-  slug: z.string().min(1, "slug חובה").regex(/^[a-z0-9-]+$/, "slug: אותיות קטנות באנגלית, מספרים, מקפים"),
-  categoryId: z.string().min(1, "בחרו קטגוריה"),
-  name: z.string().min(1, "שם חובה"),
-  nameEn: z.string().default(""),
-  meta: z.string().default(""),
-  description: z.string().default(""),
-  price: z.coerce.number().int().min(0, "מחיר לא תקין"),
-  originalPrice: z.coerce.number().int().min(0).nullable().optional(),
-  badge: z.string().nullable().optional(),
-  badgeType: z.string().nullable().optional(),
+  slug: z.string().min(1, "slug חובה").max(120).regex(/^[a-z0-9-]+$/, "slug: אותיות קטנות באנגלית, מספרים, מקפים"),
+  categoryId: z.string().min(1, "בחרו קטגוריה").max(60),
+  name: z.string().min(1, "שם חובה").max(200),
+  nameEn: z.string().max(200).default(""),
+  meta: z.string().max(200).default(""),
+  description: z.string().max(20_000).default(""),
+  price: z.coerce.number().int().min(0, "מחיר לא תקין").max(100_000_00),
+  originalPrice: z.coerce.number().int().min(0).max(100_000_00).nullable().optional(),
+  badge: z.string().max(40).nullable().optional(),
+  badgeType: z.string().max(40).nullable().optional(),
   // Optional — gated by the global products.skuEnabled setting +
   // a per-product toggle. Empty string is the canonical "no SKU".
-  sku: z.string().default(""),
-  stock: z.coerce.number().int().min(0).default(0),
-  image: z.string().min(1, "תמונה ראשית חובה"),
-  imagesText: z.string().default(""), // newline-separated paths
-  specsText: z.string().default(""), // "key: value" per line
-  sizesText: z.string().default(""), // comma-separated
-  careInstructions: z.string().nullable().optional(),
+  sku: z.string().max(80).default(""),
+  stock: z.coerce.number().int().min(0).max(100_000).default(0),
+  image: z.string().min(1, "תמונה ראשית חובה").max(2000),
+  imagesText: z.string().max(8_000).default(""), // newline-separated paths
+  specsText: z.string().max(8_000).default(""), // "key: value" per line
+  sizesText: z.string().max(2_000).default(""), // comma-separated
+  careInstructions: z.string().max(4_000).nullable().optional(),
   sortOrder: z.coerce.number().int().default(0),
   isActive: z.coerce.boolean().default(true),
   isFeatured: z.coerce.boolean().default(false),

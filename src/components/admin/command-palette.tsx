@@ -17,12 +17,11 @@ import {
   Moon,
   Home,
   Ticket,
-  BarChart3,
   ShoppingBasket,
   MessageSquare,
   Upload,
 } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "./theme-provider";
 import { signOut } from "@/lib/auth-client";
 import {
   Command,
@@ -155,10 +154,6 @@ export function CommandPalette({ trigger = "button", className }: Props) {
                 <CommandItem onSelect={() => run(() => router.push("/admin/popups"))}>
                   <MessageSquare className="size-4" />
                   <span>פופאפים</span>
-                </CommandItem>
-                <CommandItem onSelect={() => run(() => router.push("/admin/reports"))}>
-                  <BarChart3 className="size-4" />
-                  <span>דוחות</span>
                 </CommandItem>
                 <CommandItem onSelect={() => run(() => router.push("/admin/settings"))}>
                   <Settings className="size-4" />
