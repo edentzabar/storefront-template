@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { LogOut, ShieldCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import type { Prisma } from "@prisma/client";
 import { signOut } from "@/lib/auth-client";
 import { formatPrice } from "@/lib/format";
+import { deleteMyAccount } from "@/lib/account-actions";
 
 const STATUS_LABELS: Record<string, string> = {
   new: "חדשה",
@@ -25,10 +27,31 @@ type Props = {
 
 export function AccountView({ user, orders }: Props) {
   const router = useRouter();
+  // Two-step delete UX: open a modal, customer types DELETE in
+  // Hebrew ("מחק") to confirm. Prevents fat-finger account loss.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   async function handleLogout() {
     await signOut();
     toast.success("התנתקת");
+    router.push("/");
+    router.refresh();
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    const result = await deleteMyAccount();
+    if (!result.ok) {
+      toast.error(result.error);
+      setDeleting(false);
+      return;
+    }
+    // Account is gone — sign out the now-orphaned session and
+    // bounce the user to the homepage.
+    await signOut();
+    toast.success("החשבון נמחק");
     router.push("/");
     router.refresh();
   }
@@ -120,6 +143,79 @@ export function AccountView({ user, orders }: Props) {
           </div>
         )}
       </div>
+
+      {/* Danger zone — account deletion (GDPR / Israeli privacy law) */}
+      <div className="border border-destructive/20 bg-destructive/5 p-6 mt-12">
+        <h3 className="font-body text-base font-medium text-destructive mb-2 inline-flex items-center gap-2">
+          <AlertTriangle className="size-4" />
+          מחיקת חשבון
+        </h3>
+        <p className="text-sm text-brand-text-soft mb-4 leading-relaxed">
+          ההזמנות הקודמות יישמרו ברישומי החנות (חובה משפטית למסמכי
+          חשבוניות), אבל לא תוכלי לראות אותן יותר. הפרטים האישיים שלך
+          (אימייל, סיסמה, כתובות שמורות) יימחקו לצמיתות.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setDeleteOpen(true);
+            setDeleteConfirm("");
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2.5 border border-destructive text-destructive text-[0.76rem] tracking-[0.15em] uppercase font-medium hover:bg-destructive hover:text-white transition-colors"
+        >
+          מחקי את החשבון שלי
+        </button>
+      </div>
+
+      {/* Delete confirmation modal */}
+      {deleteOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4"
+          onClick={() => !deleting && setDeleteOpen(false)}
+        >
+          <div
+            className="bg-white max-w-md w-full p-6 border border-brand-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 className="font-body text-lg font-medium text-destructive mb-2 inline-flex items-center gap-2">
+              <AlertTriangle className="size-5" />
+              לאשר מחיקה?
+            </h4>
+            <p className="text-sm text-brand-text mb-4 leading-relaxed">
+              אחרי המחיקה לא נוכל לשחזר את החשבון. כדי לאשר, הקלידי
+              <strong className="text-brand-primary"> מחק </strong>
+              בשדה למטה.
+            </p>
+            <input
+              type="text"
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder="מחק"
+              autoFocus
+              disabled={deleting}
+              className="w-full px-4 py-3 border border-brand-border bg-white text-center text-base focus:outline-none focus:border-destructive mb-4"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleting}
+                className="px-4 py-2.5 border border-brand-border text-[0.76rem] tracking-[0.15em] uppercase font-medium hover:bg-brand-bg-soft transition-colors disabled:opacity-50"
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleting || deleteConfirm.trim() !== "מחק"}
+                className="px-4 py-2.5 bg-destructive text-white text-[0.76rem] tracking-[0.15em] uppercase font-medium hover:bg-destructive/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? "מוחק..." : "מחק לצמיתות"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
