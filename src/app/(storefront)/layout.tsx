@@ -2,6 +2,7 @@ import { AnnouncementBar } from "@/components/site/announcement-bar";
 import { Header } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
 import { KodMaxCredit } from "@/components/site/kodmax-credit";
+import { CookieBanner } from "@/components/site/cookie-banner";
 import { CartDrawer } from "@/components/site/cart-drawer";
 import { PopupOrchestrator } from "@/components/site/popup-orchestrator";
 import { ChatbotWidget } from "@/components/site/chatbot-widget";
@@ -41,6 +42,9 @@ export default async function StorefrontLayout({
           position={settings.chatbot.position}
         />
       )}
+      {/* Renders only until the visitor makes a consent choice; gated
+          via the client-side persisted store. */}
+      <CookieBanner />
     </ShopSettingsProvider>
   );
 }
