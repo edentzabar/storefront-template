@@ -209,28 +209,11 @@ export async function updateProduct(
 export async function deleteProduct(productId: string) {
   await assertAdmin();
   try {
-    // If this product was ever ordered, OrderItem rows reference it via
-    // a foreign key. Hard-deleting would break the order history. Soft-
-    // delete (isActive=false) instead — the storefront filters on
-    // isActive, so the product disappears from the catalog identically.
-    const hasOrders = await prisma.orderItem.findFirst({
-      where: { productId },
-      select: { id: true },
-    });
-    if (hasOrders) {
-      await prisma.product.update({
-        where: { id: productId },
-        data: { isActive: false },
-      });
-      revalidatePath("/admin/products");
-      revalidatePath("/shop");
-      return {
-        ok: true,
-        archived: true as const,
-        message:
-          "המוצר הוטמן (לא פעיל) כי יש לו הזמנות קודמות. ההיסטוריה נשמרה.",
-      };
-    }
+    // OrderItem.productId is nullable + SetNull, so deleting a product
+    // doesn't break order history. Each OrderItem already snapshots
+    // name/image/price at order time, so the customer's order shows
+    // intact even after the product row is gone. The link from the
+    // order to a live product simply becomes null.
     await prisma.product.delete({ where: { id: productId } });
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "שגיאה במחיקה" };

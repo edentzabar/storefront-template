@@ -401,8 +401,14 @@ model OrderItem {
   id        String  @id @default(uuid())
   orderId   String
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
+  /// Nullable + SetNull so a Product can be hard-deleted without
+  /// breaking order history. OrderItem already snapshots
+  /// name/image/price at order time, so the customer still sees
+  /// their order intact even if the Product row no longer exists.
+  /// `productId` remaining null just means "buy again" links can't
+  /// resolve to a live product.
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   name      String
   image     String
   size      String?

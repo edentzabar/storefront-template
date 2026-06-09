@@ -181,12 +181,16 @@ export async function getTopProducts(limit = 5, range?: DateRange): Promise<TopP
 
   const map = new Map<string, TopProduct>();
   for (const it of items) {
-    const id = it.product.id;
+    // product is nullable (hard-deleted products SetNull their FK), so
+    // fall back to the OrderItem snapshot (name/image stored on the
+    // row). Key by productId when available, otherwise by the snapshot
+    // name so the line still aggregates cleanly.
+    const id = it.product?.id ?? it.productId ?? `deleted:${it.name}`;
     if (!map.has(id)) {
       map.set(id, {
         id,
-        name: it.product.name,
-        image: it.product.image,
+        name: it.product?.name ?? it.name,
+        image: it.product?.image ?? it.image,
         unitsSold: 0,
         revenue: 0,
       });
@@ -373,7 +377,11 @@ export async function getSalesByCategory(range: DateRange): Promise<CategorySale
   });
   const map = new Map<string, CategorySales>();
   for (const it of items) {
-    const cat = it.product.category;
+    // product is nullable when the source product was hard-deleted.
+    // We skip these from the by-category breakdown (we can't infer
+    // the category retroactively); they still count toward overall
+    // revenue elsewhere via the order subtotal.
+    const cat = it.product?.category;
     if (!cat) continue;
     const existing = map.get(cat.id);
     if (existing) {
