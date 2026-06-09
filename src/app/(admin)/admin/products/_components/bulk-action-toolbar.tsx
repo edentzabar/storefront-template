@@ -59,7 +59,15 @@ export function BulkActionToolbar({
     startTransition(async () => {
       const r = await fn();
       if (r.ok) {
-        toast.success(successLabel(r.updatedCount));
+        // Bulk actions may piggy-back informational text on the
+        // `error` field even when ok=true (e.g. "5 deleted, 2 archived
+        // due to order history"). Surface that as an info toast,
+        // otherwise show the regular success label.
+        if (r.error) {
+          toast.info(r.error, { description: successLabel(r.updatedCount) });
+        } else {
+          toast.success(successLabel(r.updatedCount));
+        }
         onClear();
       } else {
         toast.error(r.error ?? "שגיאה");

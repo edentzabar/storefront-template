@@ -250,12 +250,64 @@ export async function bulkDelete(ids: string[]): Promise<BulkResult> {
   const parsedIds = idsSchema.safeParse(ids);
   if (!parsedIds.success) return { ok: false, updatedCount: 0, error: "ids לא חוקיים" };
   try {
-    const r = await prisma.product.deleteMany({
-      where: { id: { in: parsedIds.data } },
+    // Split the requested IDs into two groups:
+    //   • products that were never ordered → safe to hard-delete
+    //   • products with order history       → archive instead (isActive=false),
+    //     because hard-deleting would break the foreign key from
+    //     order_item.productId and lose receipts / refund references.
+    //
+    // The storefront already filters `where: { isActive: true }` so an
+    // archived product disappears from the catalog identically to a
+    // deleted one. The admin can still see it via the "כולל מוטמן"
+    // filter if needed.
+    const withOrders = await prisma.orderItem.findMany({
+      where: { productId: { in: parsedIds.data } },
+      select: { productId: true },
+      distinct: ["productId"],
     });
+    const archivedIds = withOrders.map((o) => o.productId);
+    const deletableIds = parsedIds.data.filter((id) => !archivedIds.includes(id));
+
+    let deletedCount = 0;
+    let archivedCount = 0;
+    await prisma.$transaction(async (tx) => {
+      if (deletableIds.length > 0) {
+        const r = await tx.product.deleteMany({
+          where: { id: { in: deletableIds } },
+        });
+        deletedCount = r.count;
+      }
+      if (archivedIds.length > 0) {
+        const r = await tx.product.updateMany({
+          where: { id: { in: archivedIds } },
+          data: { isActive: false },
+        });
+        archivedCount = r.count;
+      }
+    });
+
     revalidatePath("/admin/products");
     revalidatePath("/shop");
-    return { ok: true, updatedCount: r.count };
+
+    // Compose a friendly message reflecting what actually happened.
+    const total = deletedCount + archivedCount;
+    let error: string | undefined;
+    if (archivedCount > 0 && deletedCount === 0) {
+      error =
+        archivedCount === 1
+          ? "המוצר הוטמן כי יש לו הזמנות קודמות (לא ניתן למחוק לחלוטין)."
+          : `${archivedCount} מוצרים הוטמנו כי יש להם הזמנות קודמות (לא ניתן למחוק לחלוטין).`;
+    } else if (archivedCount > 0) {
+      error = `${deletedCount} נמחקו לחלוטין, ${archivedCount} הוטמנו (יש להם היסטוריית הזמנות).`;
+    }
+
+    return {
+      ok: true,
+      updatedCount: total,
+      // We piggy-back on `error` to surface the info toast. The
+      // bulk-action UI displays this regardless of ok.
+      error,
+    };
   } catch (err) {
     return {
       ok: false,
