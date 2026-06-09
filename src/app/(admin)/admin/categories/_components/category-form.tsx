@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, X, GripVertical } from "lucide-react";
 import type { Category } from "@prisma/client";
 import type { CategoryFormState } from "@/lib/admin/categories-actions";
 import { cn } from "@/lib/utils";
 import { hebrewToSlug } from "@/lib/hebrew-slug";
+import { translateNameToSlug } from "@/lib/ai/slug-actions";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import {
   DndContext,
@@ -105,14 +106,39 @@ export function CategoryForm({
       return arrayMove(rows, oldIndex, newIndex);
     });
   }
+  // Debounced AI translation for the parent slug. We set a transliterated
+  // slug instantly so the UI never feels stalled, then upgrade it to a
+  // proper English translation (תכשיטים → jewelry) ~500ms after the
+  // merchant stops typing. If AI is off, the upgrade just returns the
+  // same transliteration.
+  const parentTranslateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (parentTranslateTimer.current) clearTimeout(parentTranslateTimer.current);
+    };
+  }, []);
+
   function handleNameChange(value: string) {
     setName(value);
-    // New categories: regenerate slug as the merchant types.
-    // Existing categories: preserve the saved slug so existing URLs
-    // don't break on rename.
-    if (!category) {
-      setSlug(hebrewToSlug(value));
-    }
+    // Existing categories preserve their saved slug so URLs survive renames.
+    if (category) return;
+    // Instant feedback via transliteration.
+    setSlug(hebrewToSlug(value));
+    // Then ask the AI for a real translation (debounced).
+    if (parentTranslateTimer.current) clearTimeout(parentTranslateTimer.current);
+    const snapshot = value;
+    parentTranslateTimer.current = setTimeout(async () => {
+      if (!snapshot.trim()) return;
+      const { slug: translated } = await translateNameToSlug(snapshot);
+      // Only apply if the merchant hasn't typed something else in the
+      // meantime (would race with newer input).
+      if (translated) {
+        setName((current) => {
+          if (current === snapshot) setSlug(translated);
+          return current;
+        });
+      }
+    }, 600);
   }
 
   // ── Inline children helpers ──
@@ -127,6 +153,17 @@ export function CategoryForm({
   function removeChildByKey(key: string) {
     setChildren((rows) => rows.filter((r) => r._key !== key));
   }
+  // One debounce timer per child key — each row translates independently.
+  const childTranslateTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
+  useEffect(() => {
+    return () => {
+      childTranslateTimers.current.forEach((t) => clearTimeout(t));
+      childTranslateTimers.current.clear();
+    };
+  }, []);
+
   function updateChildByKey(key: string, patch: Partial<ChildDraft>) {
     setChildren((rows) =>
       rows.map((r) => {
@@ -144,6 +181,30 @@ export function CategoryForm({
         return next;
       }),
     );
+
+    // Schedule AI translation upgrade for the slug of a NEW child row.
+    if (patch.name !== undefined) {
+      const existing = children.find((r) => r._key === key);
+      if (existing && !existing.id) {
+        const prev = childTranslateTimers.current.get(key);
+        if (prev) clearTimeout(prev);
+        const snapshot = patch.name;
+        const timer = setTimeout(async () => {
+          if (!snapshot.trim()) return;
+          const { slug: translated } = await translateNameToSlug(snapshot);
+          if (translated) {
+            setChildren((rows) =>
+              rows.map((r) =>
+                r._key === key && r.name === snapshot
+                  ? { ...r, slug: translated }
+                  : r,
+              ),
+            );
+          }
+        }, 600);
+        childTranslateTimers.current.set(key, timer);
+      }
+    }
   }
 
   // Serialize children for the server action — only valid rows (name + slug)

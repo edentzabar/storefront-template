@@ -68,6 +68,38 @@ async function assertAdmin() {
   if (!(await isAdmin())) throw new Error("Unauthorized");
 }
 
+/**
+ * Ensure a category slug is unique across the whole `category` table.
+ * If the requested slug is taken, append `-2`, `-3`, etc. until a free
+ * one is found. Category slug is globally unique (no scoping by parent)
+ * so that storefront URLs like `/category/x` are unambiguous.
+ *
+ * `excludeId` lets the update flow keep its own slug when nothing changed.
+ * `client` lets the caller pass a transaction client so the uniqueness
+ * check happens inside the same tx as the create.
+ */
+async function uniqueCategorySlug(
+  desired: string,
+  excludeId: string | null,
+  client: { category: { findUnique: typeof prisma.category.findUnique } } = prisma,
+): Promise<string> {
+  const base = desired.replace(/-\d+$/, ""); // strip pre-existing numeric suffix
+  let candidate = base;
+  let n = 1;
+  while (true) {
+    const existing = await client.category.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    });
+    if (!existing || existing.id === excludeId) return candidate;
+    n += 1;
+    candidate = `${base}-${n}`;
+    // Safety net so a bug can't infinite-loop. 999 collisions on the
+    // same slug means the merchant probably has bigger problems.
+    if (n > 999) throw new Error("לא הצלחנו לייצר slug ייחודי");
+  }
+}
+
 /* ────────────── Create ────────────── */
 
 export async function createCategory(
@@ -94,9 +126,12 @@ export async function createCategory(
   // created exclusively through their parent's children editor.
   try {
     await prisma.$transaction(async (tx) => {
+      // Ensure unique slug for the parent. If the merchant typed a
+      // slug that collides with another category, append -2/-3/...
+      const parentSlug = await uniqueCategorySlug(parsed.data.slug, null, tx);
       const parent = await tx.category.create({
         data: {
-          slug: parsed.data.slug,
+          slug: parentSlug,
           name: parsed.data.name,
           nameEn: parsed.data.nameEn,
           cta: parsed.data.cta,
@@ -111,9 +146,13 @@ export async function createCategory(
       });
       for (let i = 0; i < children.length; i++) {
         const c = children[i];
+        // Children also need unique slugs. A child named "טבעות" under
+        // both "תכשיטים" and "כסף" needs distinct slugs ("rings" and
+        // "rings-2") so storefront URLs don't clash.
+        const childSlug = await uniqueCategorySlug(c.slug, null, tx);
         await tx.category.create({
           data: {
-            slug: c.slug,
+            slug: childSlug,
             name: c.name,
             nameEn: c.nameEn,
             sortOrder: i,
@@ -198,11 +237,18 @@ export async function updateCategory(
     }
 
     await prisma.$transaction(async (tx) => {
-      // Update the category itself — parentId NOT touched
+      // Update the category itself — parentId NOT touched.
+      // Slug uniqueness: allow keeping our current slug, otherwise
+      // append -2/-3 if the new one collides with another category.
+      const parentSlug = await uniqueCategorySlug(
+        parsed.data.slug,
+        categoryId,
+        tx,
+      );
       await tx.category.update({
         where: { id: categoryId },
         data: {
-          slug: parsed.data.slug,
+          slug: parentSlug,
           name: parsed.data.name,
           nameEn: parsed.data.nameEn,
           cta: parsed.data.cta,
@@ -222,16 +268,20 @@ export async function updateCategory(
         await tx.category.deleteMany({ where: { id: { in: toDelete } } });
       }
 
-      // Upsert remaining children — preserve order via sortOrder = i
+      // Upsert remaining children — preserve order via sortOrder = i.
+      // Each child's slug is also deduped so the merchant can name a
+      // child "טבעות" under two parents without hitting the unique
+      // constraint.
       for (let i = 0; i < effectiveChildren.length; i++) {
         const c = effectiveChildren[i];
+        const childSlug = await uniqueCategorySlug(c.slug, c.id ?? null, tx);
         if (c.id) {
           await tx.category.update({
             where: { id: c.id },
             data: {
               name: c.name,
               nameEn: c.nameEn,
-              slug: c.slug,
+              slug: childSlug,
               sortOrder: i,
               parentId: categoryId,
             },
@@ -241,7 +291,7 @@ export async function updateCategory(
             data: {
               name: c.name,
               nameEn: c.nameEn,
-              slug: c.slug,
+              slug: childSlug,
               sortOrder: i,
               parentId: categoryId,
             },
