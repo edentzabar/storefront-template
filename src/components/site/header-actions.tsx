@@ -36,7 +36,7 @@ export function HeaderActions() {
       >
         <Heart className="w-[19px] h-[19px] stroke-[1.5]" />
         {mounted && wishlistCount > 0 && (
-          <span className="absolute -top-0.5 -left-0.5 min-w-[18px] h-[18px] inline-flex items-center justify-center bg-brand-accent text-white text-[0.65rem] font-medium rounded-full px-1">
+          <span className="absolute -top-0.5 -start-0.5 min-w-[18px] h-[18px] inline-flex items-center justify-center bg-brand-accent text-white text-[0.65rem] font-medium rounded-full px-1">
             {wishlistCount}
           </span>
         )}
@@ -50,7 +50,7 @@ export function HeaderActions() {
       >
         <ShoppingBag className="w-[19px] h-[19px] stroke-[1.5]" />
         {mounted && cartCount > 0 && (
-          <span className="absolute -top-0.5 -left-0.5 min-w-[18px] h-[18px] inline-flex items-center justify-center bg-brand-accent text-white text-[0.65rem] font-medium rounded-full px-1">
+          <span className="absolute -top-0.5 -start-0.5 min-w-[18px] h-[18px] inline-flex items-center justify-center bg-brand-accent text-white text-[0.65rem] font-medium rounded-full px-1">
             {cartCount}
           </span>
         )}

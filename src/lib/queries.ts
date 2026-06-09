@@ -208,10 +208,17 @@ export async function getCategoryById(id: string): Promise<CategoryView | null> 
 
 // ---------- slugs (for generateStaticParams) ----------
 
+// Sitemap caps. Sitemap.xml supports up to 50,000 URLs per file; we
+// cap below that to keep the response well under Vercel's 4.5MB
+// function payload limit. At >40k products, switch to a sitemap index
+// with multiple paginated sitemaps.
+const SITEMAP_CAP = 40_000;
+
 export async function getAllProductSlugs(): Promise<string[]> {
   const rows = await prisma.product.findMany({
     where: { isActive: true },
     select: { slug: true },
+    take: SITEMAP_CAP,
   });
   return rows.map((r) => r.slug);
 }
@@ -220,16 +227,23 @@ export async function getAllCategorySlugs(): Promise<string[]> {
   const rows = await prisma.category.findMany({
     where: { isActive: true },
     select: { slug: true },
+    take: SITEMAP_CAP,
   });
   return rows.map((r) => r.slug);
 }
 
 // ---------- admin / dashboard ----------
 
-export async function getAllOrders() {
+/**
+ * Admin orders list. Caps the result at 500 so a store with 100k+
+ * orders doesn't crash the admin. The admin orders page should
+ * paginate or use the toolbar's date filter; this is the safety net.
+ */
+export async function getAllOrders(limit = 500) {
   return prisma.order.findMany({
     orderBy: { createdAt: "desc" },
     include: { items: true },
+    take: limit,
   });
 }
 
@@ -248,8 +262,12 @@ export async function getOrdersByUser(userId: string) {
   });
 }
 
-export async function getAllCustomers() {
-  return prisma.user.findMany({ orderBy: { createdAt: "desc" } });
+/** Capped at 500 — see getAllOrders. */
+export async function getAllCustomers(limit = 500) {
+  return prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
 }
 
 export async function getDashboardStats() {

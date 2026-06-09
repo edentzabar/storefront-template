@@ -46,7 +46,7 @@ export default async function PackingSlipPage({ params }: Params) {
               {siteConfig.contact.phone} · {siteConfig.contact.email}
             </div>
           </div>
-          <div className="text-left">
+          <div className="text-end">
             <div className="text-[10px] uppercase tracking-wider text-zinc-500">
               תעודת משלוח
             </div>
@@ -92,17 +92,17 @@ export default async function PackingSlipPage({ params }: Params) {
         <table className="w-full border-collapse mb-6">
           <thead>
             <tr className="border-b-2 border-zinc-900 text-[10px] uppercase tracking-wider text-zinc-500">
-              <th className="text-right py-2 pl-2 font-medium">פריט</th>
-              <th className="text-right py-2 font-medium w-24">מק&quot;ט / מידה</th>
+              <th className="text-start py-2 ps-2 font-medium">פריט</th>
+              <th className="text-start py-2 font-medium w-24">מק&quot;ט / מידה</th>
               <th className="text-center py-2 font-medium w-16">כמות</th>
-              <th className="text-left py-2 pr-2 font-medium w-28">מחיר ליחידה</th>
-              <th className="text-left py-2 pr-2 font-medium w-28">סה&quot;כ</th>
+              <th className="text-end py-2 pe-2 font-medium w-28">מחיר ליחידה</th>
+              <th className="text-end py-2 pe-2 font-medium w-28">סה&quot;כ</th>
             </tr>
           </thead>
           <tbody>
             {order.items.map((item) => (
               <tr key={item.id} className="border-b border-zinc-200">
-                <td className="py-3 pl-2">
+                <td className="py-3 ps-2">
                   <div className="flex items-center gap-3">
                     <div className="relative size-12 shrink-0 overflow-hidden border border-zinc-200">
                       {item.image && (
@@ -119,11 +119,11 @@ export default async function PackingSlipPage({ params }: Params) {
                   </div>
                 </td>
                 <td className="py-3 text-xs text-zinc-600 font-mono">
-                  {item.size ? item.size : "—"}
+                  {item.size ? item.size : "·"}
                 </td>
                 <td className="py-3 text-center tabular-nums font-semibold">{item.qty}</td>
-                <td className="py-3 pr-2 text-left tabular-nums">{formatPrice(item.price)}</td>
-                <td className="py-3 pr-2 text-left tabular-nums font-semibold">
+                <td className="py-3 pe-2 text-end tabular-nums">{formatPrice(item.price)}</td>
+                <td className="py-3 pe-2 text-end tabular-nums font-semibold">
                   {formatPrice(item.price * item.qty)}
                 </td>
               </tr>

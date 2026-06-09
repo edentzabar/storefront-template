@@ -32,14 +32,14 @@ export function SearchView({ products, categories }: Props) {
     <div>
       <div className="max-w-[640px] mx-auto mb-10">
         <div className="relative">
-          <SearchIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-text-soft" />
+          <SearchIcon className="absolute start-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-text-soft" />
           <input
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="חפשו מוצר, קטגוריה, מק״ט…"
             autoFocus
-            className="w-full pr-12 pl-4 py-4 border border-brand-border bg-white text-[1rem] focus:outline-none focus:border-brand-primary"
+            className="w-full ps-12 pe-4 py-4 border border-brand-border bg-white text-[1rem] focus:outline-none focus:border-brand-primary"
           />
         </div>
         <div className="flex gap-2 mt-3 flex-wrap">

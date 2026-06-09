@@ -31,7 +31,13 @@ const productSchema = z.object({
   sortOrder: z.coerce.number().int().default(0),
   isActive: z.coerce.boolean().default(true),
   isFeatured: z.coerce.boolean().default(false),
-});
+}).refine(
+  (d) => d.originalPrice == null || d.originalPrice >= d.price,
+  {
+    path: ["originalPrice"],
+    message: "המחיר המקורי חייב להיות גדול או שווה למחיר הנוכחי",
+  },
+);
 
 export type ProductFormState = {
   ok: boolean;

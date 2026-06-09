@@ -36,8 +36,8 @@ export default function FaqPage() {
       <main className="py-14 px-6 lg:px-10">
         <div className="max-w-[820px] mx-auto">
           <Accordion className="space-y-1">
-            {faqContent.map((item, i) => (
-              <AccordionItem key={i} value={`item-${i}`}>
+            {faqContent.map((item) => (
+              <AccordionItem key={item.q} value={item.q}>
                 <AccordionTrigger className="text-[1rem] font-medium text-brand-primary">
                   {item.q}
                 </AccordionTrigger>

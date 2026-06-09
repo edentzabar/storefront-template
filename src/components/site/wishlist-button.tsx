@@ -72,7 +72,7 @@ export function WishlistButton({ productId, variant = "card", className }: Props
       aria-label="הוסף למועדפים"
       aria-pressed={isActive}
       className={cn(
-        "absolute top-3.5 left-3.5 w-9 h-9 inline-flex items-center justify-center bg-white/92 backdrop-blur-sm hover:scale-105 transition-all z-10 rounded-full shadow-sm",
+        "absolute top-3.5 end-3.5 w-9 h-9 inline-flex items-center justify-center bg-white/92 backdrop-blur-sm hover:scale-105 transition-all z-10 rounded-full shadow-sm",
         isActive ? "bg-brand-accent text-white" : "text-brand-text-soft hover:text-brand-accent",
         className
       )}

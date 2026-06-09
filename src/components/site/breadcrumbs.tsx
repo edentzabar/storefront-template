@@ -9,7 +9,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
         {items.map((item, i) => {
           const isLast = i === items.length - 1;
           return (
-            <li key={i} className="flex items-center gap-2 text-brand-text-soft">
+            <li key={`${item.href ?? "step"}:${item.label}`} className="flex items-center gap-2 text-brand-text-soft">
               {item.href && !isLast ? (
                 <Link href={item.href} className="hover:text-brand-accent transition-colors no-underline">
                   {item.label}

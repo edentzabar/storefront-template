@@ -81,7 +81,7 @@ export default async function CategoryPage({ params }: Params) {
       <header className="relative min-h-[320px] text-white text-center bg-brand-primary py-12 lg:py-20 px-6 lg:px-10 flex items-center justify-center overflow-hidden">
         {category.image && (
           <>
-            <Image src={category.image} alt="" fill priority sizes="100vw" className="object-cover" />
+            <Image src={category.image} alt={category.name} fill priority sizes="100vw" className="object-cover" />
             <div className="absolute inset-0 bg-black/50" />
           </>
         )}

@@ -49,7 +49,17 @@ function normalize(input: unknown) {
       minSubtotal: data.minSubtotal,
       maxUses: data.maxUses,
       perUserLimit: data.perUserLimit,
-      expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+      // Admin picks a date like "2026-06-10" expecting the coupon to
+       // stay valid through that whole day in Israel. `new Date("2026-06-10")`
+       // parses as 00:00 UTC = 02:00 IL on 10 June, so the coupon
+       // would expire at 03:00 IL Tuesday morning instead of 23:59
+       // Tuesday night. We add ~24h minus 1s so it expires at end of
+       // day Israel time (offset varies with DST: +2 in winter, +3 in
+       // summer; using 23:59:59 UTC keeps it correct in both cases
+       // because Israel is always ahead of UTC).
+      expiresAt: data.expiresAt
+        ? new Date(`${data.expiresAt}T23:59:59Z`)
+        : null,
       isActive: data.isActive,
     },
   };
