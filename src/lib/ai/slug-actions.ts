@@ -3,6 +3,7 @@
 import { getProvider } from "./provider";
 import { isAdmin } from "@/lib/session";
 import { hebrewToSlug } from "@/lib/hebrew-slug";
+import { dictionaryTranslate } from "@/lib/hebrew-dictionary";
 import { rateLimit, getClientIp, POLICIES } from "@/lib/rate-limit";
 
 /**
@@ -29,6 +30,14 @@ export async function translateNameToSlug(
   const trimmed = (name ?? "").trim();
   if (!trimmed) return { slug: "", usedFallback: true };
 
+  // STAGE 1: try the built-in dictionary. Free, instant, no network.
+  // Covers ~95% of common Israeli shopping vocabulary. If it hits,
+  // we're done — no need to bother the AI or pay for it.
+  const fromDict = dictionaryTranslate(trimmed);
+  if (fromDict) {
+    return { slug: fromDict, usedFallback: false };
+  }
+
   // SECURITY: cap input + rate-limit so a sloppy effect loop in the
   // admin can't burn the API key.
   if (trimmed.length > 120) {
@@ -40,7 +49,7 @@ export async function translateNameToSlug(
     return { slug: hebrewToSlug(trimmed), usedFallback: true };
   }
 
-  // If no AI provider is configured, fall back to transliteration.
+  // STAGE 2: if no AI provider is configured, fall back to transliteration.
   const { provider } = await getProvider();
   if (!provider) {
     return { slug: hebrewToSlug(trimmed), usedFallback: true };
